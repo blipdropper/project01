@@ -5,18 +5,48 @@
 //  Created by DANIEL PATRIARCA on 8/12/18.
 //  Copyright © 2018 DANIEL PATRIARCA. All rights reserved.
 //
+//  ToDo: why does post redirect to feed, compress images, add location to blip post, get the image URL (poke around Ubuntu?)
+//  ISSUE: insecure text data transfer, not using blipdropper.com
+//  ISSUE: need to request access to camera roll and enable camera
+//  ISSUE: need to convert to VC with tableview vs. custom TableViewVC because floating button will break
+
 
 import UIKit
 import CoreData
+import Parse
+
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        /*
+        //----------------------
+        // Log users local date/time
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        let dateString = "Current date is: \(dateFormatter.string(from: Date() as Date))"
+        print(String(dateString))
+        //Time
+        let timeFormatter = DateFormatter()
+        timeFormatter.timeStyle = .medium
+        let timeString = "Current time is: \(timeFormatter.string(from: Date() as Date))"
+        print(String(timeString))
+        */
+        // Initialize Parse-server
+        let configuration = ParseClientConfiguration {
+            $0.applicationId = "c4f3ec23021d93ae802698b4003fce5cb5120d07"
+            $0.clientKey = "ac27fd1b32274bda6f81051c4ff198f23050f8bd"
+            //            $0.applicationId = "b291cf81e6917850bf5c0922ae686e171d43fa5e"
+            //            $0.clientKey = "4d519cc6a5672f08d6f703c3e6c7900cf79de035"
+            $0.server = "http://dev.blipdropper.com/parse"
+            // test somehow that the connection worked
+        }
+        Parse.initialize(with: configuration)
+
         return true
     }
 

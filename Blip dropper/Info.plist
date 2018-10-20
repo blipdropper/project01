@@ -41,5 +41,28 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>dev.blipdropper.com</key>
+			<dict>
+				<key>NSTemporaryExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>To provide nearby places of interest to blips</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>To enable blips to drop automaticaly to hep you remember where you were</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>To upload an image for your blip</string>
+	<key>NSCameraUsageDescription</key>
+	<string>To upload an image for your blip</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>To upload an image for your blip</string>
 </dict>
 </plist>
