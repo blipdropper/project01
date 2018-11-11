@@ -5,49 +5,218 @@
 //  Created by DANIEL PATRIARCA on 10/8/18.
 //  Copyright © 2018 DANIEL PATRIARCA. All rights reserved.
 //
+// Exif day light savings?
+// Check for match in function, capture any time address matches but not the name, tokenize the name to see if some % of the items match (can use in search resutls gathering)
+// BlipPlace data type, custom needs what blip place elements
+// Exit cleanly when timer reached
+// Load the data for the place/save the data for the place
+// Place page for hitting button after setting YelpHere... Yelp Page?  VC with yelp details or blip places?
 
 import UIKit
+import MapKit
 
-class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataSource, MKMapViewDelegate{
     var blipFiles = [blipFile]()
     var yelpBusinesses = [yelpBusinessSearch]()
+    var yelpDone = false
+    var hereItems = [hereItem]()
+    var hereDone = false
+    var blipPlaces = [blipPlace]()
+    var curBlipPlace = blipPlace()
 
     var mode = ""
     
+    @IBOutlet weak var map: MKMapView!
+    @IBOutlet weak var searchBox: UITextField!
     @IBOutlet weak var PlaceTableView: UITableView!
+    @IBOutlet weak var topLabel: UILabel!
+
+    @IBAction func searchArea(_ sender: Any) {
+        print("Rerun the Yelp places list for map area... if an address is in the text box reset map to there... if its not an address filter?")
+        print("Lat = \(map.centerCoordinate.latitude) Lon = \(map.centerCoordinate.longitude)")
+/*
+        // find places using apple map (not interoperable with address search setting map to area)
+        let searchRequest = MKLocalSearchRequest()
+        searchRequest.naturalLanguageQuery = searchBox.text ?? ""
+        searchRequest.region = map.region
+        let mapSearch = MKLocalSearch(request: searchRequest)
+        mapSearch.start {
+            (searchResponse, error) in
+            if error != nil {
+                print(error ?? "")
+            } else if searchResponse!.mapItems.count == 0  {
+                print("No search results for that")
+            } else {
+                for singleItem in searchResponse!.mapItems {
+                    print(singleItem)
+                }
+            }
+        }
+*/
+        // Refresh the Places list
+        yelpDone = false
+        hereDone = false
+        blipPlaces = [blipPlace]()
+        getYelp(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
+        getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
+        runTimer()
+    }
     @IBAction func cancelPicker(_ sender: Any) {
         self.dismiss(animated: true, completion: nil)
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return yelpBusinesses.count
+        return blipPlaces.count
     }
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = PlaceTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipFileTVCell
         cell.mode = "select"
-        cell.placeLabel.text = "\(indexPath.row) - \(yelpBusinesses[indexPath.row].name)"
-        print("table loaded....")
+        cell.placeLabel.text = "\(indexPath.row): \(blipPlaces[indexPath.row].name) - \(blipPlaces[indexPath.row].distance ?? 999)"
+        //\(blipPlaces[indexPath.row].yelpArrayPosition) \(blipPlaces[indexPath.row].hereArrayPosition)- \(blipPlaces[indexPath.row].distance ?? 999) - \(blipPlaces[indexPath.row].name)"
         return cell
     }
     
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        curBlipPlace = blipPlaces[indexPath.row]
+        print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
+        curBlip.blip_yelp_id = curBlipPlace.yelpId
+        curBlip.blip_here_id = curBlipPlace.hereId
+        curBlip.place_lat = curBlipPlace.lat
+        curBlip.place_lon = curBlipPlace.lon
+        curBlip.place_addr = curBlipPlace.address1
+        curBlip.place_name = curBlipPlace.name
+        self.dismiss(animated: true, completion: nil)
+    }
+    
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        printLog(stringValue: "View Did load happened")
         PlaceTableView.dataSource = self
         if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
-            getYelp(latitude: lat, longitude: lon)
+            let mapCenter = CLLocationCoordinate2DMake(lat, lon)
+            let mapSpan = MKCoordinateSpanMake(0.01, 0.01)
+            let mapRegion = MKCoordinateRegionMake(mapCenter, mapSpan)
+            self.map.setRegion(mapRegion, animated: true)
         }
-        print("After load: \(yelpBusinesses.count)")
+    }
+
+    func runTimer() {
+        var runCount = 0
+        printLog(stringValue: "Timer function received   ")
+
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { timer in
+            printLog(stringValue: "Timer for runcount \(runCount) fired")
+            runCount += 1
+            if self.yelpDone && self.hereDone {
+                for yelp in self.yelpBusinesses {
+                    var nameMatch = false
+                    var addrMatch = false
+                    var curBlipPlace = blipPlace()
+                    print ("----------\nChecking:\n\(yelp.name) :at \(yelp.address1) \(yelp.lat ?? 0), \(yelp.lon ?? 0)\n----------\n")
+
+                    for i in 0..<self.hereItems.count {
+                        // print("\(i) of \(self.hereItems.count)")
+                        let here = self.hereItems[i]
+
+                        // Does the Here/Yelp address line 1 match
+                        if yelp.address1 == here.address1 {
+                            print("YES- \(here.address1)=\(yelp.address1)")
+                            addrMatch = true
+                        } else {
+                            //print("no - \(here.address1)=\(yelp.address1)")
+                            addrMatch = false
+                        }
+                        // Does the Here/Yelp title/name match
+                        if yelp.name == here.title {
+                            print("YES- \(here.title)=\(yelp.name)")
+                            nameMatch = true
+                        } else {
+                            // print("no - \(here.title)=\(yelp.name)")
+                            nameMatch = false
+                            // Do any of the alternative Here names match Yelp
+                            for name in here.alternativeNames {
+                                if yelp.name == name {
+                                    print("  but YES- \(name)=\(yelp.name)")
+                                    nameMatch = true
+                                } else {
+                                    //print("  no - \(name)=\(yelp.name)")
+                                    nameMatch = false
+                                }
+                            }
+                        }
+                        if nameMatch && addrMatch {
+                            // Here Place Match: set here and remove from here array
+                            curBlipPlace.hereId = here.hereId
+                            curBlipPlace.here = here
+                            curBlipPlace.hereArrayPosition = here.arrayPosition
+                            print("REMOVING \(self.hereItems[i].title) from \(here.arrayPosition)")
+                            self.hereItems.remove(at: i)
+                            break
+                        }
+                    }
+                    curBlipPlace.name = yelp.name
+                    curBlipPlace.distance = yelp.distance
+                    curBlipPlace.address1 = yelp.address1
+                    curBlipPlace.lat = yelp.lat
+                    curBlipPlace.lon = yelp.lon
+                    curBlipPlace.yelpId = yelp.yelpId
+                    curBlipPlace.yelp = yelp
+                    curBlipPlace.yelpArrayPosition = yelp.arrayPosition
+                    self.blipPlaces.append(curBlipPlace)
+                }
+                // Add Here only items into Blip Places (Make Func)
+                for here in self.hereItems {
+                    var curBlipPlace = blipPlace()
+                    print ("\(here.arrayPosition): \(here.title)")
+                    self.topLabel.text = "Count is \(self.hereItems.count)"
+                    curBlipPlace.name = here.title
+                    curBlipPlace.distance = here.distance
+                    curBlipPlace.address1 = here.address1
+                    curBlipPlace.lat = here.lat
+                    curBlipPlace.lon = here.lon
+                    curBlipPlace.hereId = here.hereId
+                    curBlipPlace.here = here
+                    curBlipPlace.hereArrayPosition = here.arrayPosition
+// Commented out to reduce annotation clutter
+                    //                    self.blipPlaces.append(curBlipPlace)
+                }
+                // Add a spot on the array for Add Your Own Place
+                self.blipPlaces.sort { $0.distance ?? 9999 < $1.distance ?? 9999 }
+                for i in 0..<self.blipPlaces.count {
+                    if let lat = self.blipPlaces[i].lat, let lon = self.blipPlaces[i].lon {
+                        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                        let annotation = MKPointAnnotation()
+                        annotation.coordinate = coordinate
+                        annotation.title = self.blipPlaces[i].name
+                        annotation.subtitle = String(i)
+                        
+                        self.map.addAnnotation(annotation)
+                    }
+                }
+                
+                self.PlaceTableView.reloadData()
+                timer.invalidate()
+            }
+            if runCount == 20 { //
+                print("This took too long, notify user and die cleanly")
+                timer.invalidate()
+            }
+        }
     }
     
     func getYelp(latitude: Double, longitude: Double) {
         // let appId = "7OyP1OAh76FSPkKVRnoC2w"
-        let appSecret = "Bearer aeLA0m0U9cqOFqgN3CHVOQ_UaJDlB6DCysj23z-woyfmA4Mxf_nMjYO_clogiXE44VF06VohQBO0k-3TFJbEUWqxWr7fJmZJLTz2ojSmljIqsDBCfODqYTKgyK6OW3Yx"
         let link = "https://api.yelp.com/v3/businesses/search?sort_by=distance&latitude=\(latitude)&longitude=\(longitude)"
         if let url = URL(string: link) {
             // Set headers
             var request = URLRequest(url: url)
             request.setValue("Accept-Language", forHTTPHeaderField: "en-us")
-            request.setValue(appSecret, forHTTPHeaderField: "Authorization")
+            request.setValue(yelpApiKey, forHTTPHeaderField: "Authorization")
             
             print("Attempting to get places around location from Yelp")
             let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
@@ -58,8 +227,9 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                         do {
                             let jsonResult = try JSONSerialization.jsonObject(with: urlContent, options: JSONSerialization.ReadingOptions.mutableContainers) as AnyObject
                             if let places = jsonResult["businesses"] as? NSArray {
-                                self.yelpBusinesses = printYelpBusiness(arrayValue: places)
-                                print("Count is \(self.yelpBusinesses.count)")
+                                // -- Get the Yelp Busnesses
+                                self.yelpBusinesses = parseYelpBusinessesArray(arrayValue: places)
+                                self.yelpDone = true
                             }
                         } catch {
                             print("-------------------------\nJSON Processing Failed\n--------------------------")
@@ -69,15 +239,13 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
             }
             task.resume()
         } else {
-            print("Couldn't get YELP")
+            print("-------------------------\nYelp API Link failed\n--------------------------")
         }
     }
     
     func getHere(latitude: Double, longitude: Double) {
-        print("Run Here")
-        let app_id = "u0kMh9pqRbVbIRoRUDUR"
-        let app_code = "Sm_Nj0Z8V4_Ac-azowbweQ"
-        if let url = URL(string: "https://places.cit.api.here.com/places/v1/discover/around?at=\(latitude)%2C\(longitude)&Accept-Language=en-us%2Cen%3Bq%3D0.9&app_id=\(app_id)&app_code=\(app_code)") {
+        if let url = URL(string: "https://places.cit.api.here.com/places/v1/discover/around?at=\(latitude)%2C\(longitude)&Accept-Language=en-us%2Cen%3Bq%3D0.9&app_id=\(hereAppId)&app_code=\(hereAppCode)") {
+            print("Attempting to get places around location from Here")
             let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
                 if error != nil {
                     print(error!)
@@ -86,7 +254,12 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                         do {
                             let jsonResult = try JSONSerialization.jsonObject(with: urlContent, options: JSONSerialization.ReadingOptions.mutableContainers) as AnyObject
                             if let places = (jsonResult["results"] as? NSDictionary)?["items"] as? NSArray {
-                                printHereItem(arrayValue: places)
+                                self.hereItems = printHereItem(arrayValue: places)
+                                self.hereDone = true
+
+                                DispatchQueue.main.async {
+                                    self.topLabel.text = "Count is \(self.hereItems.count)"
+                                }
                             }
                         } catch {
                             print("JSON Processing Failed/n/n//n--------------------------")
@@ -99,4 +272,38 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
             print("Couldn't get results from Here")
         }
     }
+
+    // ----------------------------------------
+    // Maps and Annotations
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        if let tempString = (view.annotation?.subtitle) as? String {
+            print("ok... \(tempString)")
+            if let tempInt = Int(tempString) {
+                curBlipPlace = blipPlaces[tempInt]
+                print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
+                curBlip.blip_yelp_id = curBlipPlace.yelpId
+                curBlip.blip_here_id = curBlipPlace.hereId
+                curBlip.place_lat = curBlipPlace.lat
+                curBlip.place_lon = curBlipPlace.lon
+                curBlip.place_addr = curBlipPlace.address1
+                curBlip.place_name = curBlipPlace.name
+                self.dismiss(animated: true, completion: nil)
+            }
+        }
+    }
+    /*
+     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+     let view = MKAnnotationView(annotation: annotation, reuseIdentifier: "annotationId")
+     view.canShowCallout = true
+     return view
+     }
+     func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+     if let annotation = views.first(where: { $0.reuseIdentifier == "annotationId" })?.annotation {
+     mapView.selectAnnotation(annotation, animated: true)
+     }
+     }
+     */
+
 }
+
+

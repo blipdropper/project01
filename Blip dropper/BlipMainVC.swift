@@ -36,10 +36,16 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     @IBOutlet weak var blipPlace: UIButton!
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var imageView: UIImageView!
-
+    @IBOutlet weak var placeLabel: UILabel!
+    
     @IBAction func pickPlace(_ sender: Any) {
-        print("PickPlace clicked")
-        self.performSegue(withIdentifier: "showPlacePicker", sender: self)
+        print("curBlip yelp id: \(curBlip.blip_yelp_id)")
+        if curBlip.blip_yelp_id != "" || curBlip.blip_here_id != "" {
+            print("\(curBlip.blip_yelp_id), \(curBlip.blip_here_id), \(curBlip.blip_yelp_id), ")
+            self.performSegue(withIdentifier: "showPlacePicker", sender: self)
+        } else {
+            self.performSegue(withIdentifier: "showPlacePicker", sender: self)
+        }
     }
     @IBAction func actionOpenCamera(_ sender: Any) {
         askCameraPermission()
@@ -81,7 +87,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 blip!["blip_address"] = curBlip.blip_addr
                 blip!["latitude"] = curBlip.blip_lat
                 blip!["longitude"] = curBlip.blip_lon
-
+                blip!["yelp_id"] = curBlip.blip_yelp_id
+                blip!["here_id"] = curBlip.blip_here_id
+                blip!["place_name"] = curBlip.place_name
+                if curBlip.place_lat != nil {
+                    blip!["place_lat"] = curBlip.place_lat }
+                if curBlip.place_lon != nil {
+                    blip!["place_lon"] = curBlip.place_lon }
+                blip!["place_addr"] = curBlip.place_addr
                 blip!.saveInBackground()
             } else {
                 print(error?.localizedDescription ?? "")
@@ -96,9 +109,15 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         loadedBlips[curBlip.arrayPosition].blip_lat = curBlip.blip_lat
         loadedBlips[curBlip.arrayPosition].blip_lon = curBlip.blip_lon
         loadedBlips[curBlip.arrayPosition].blip_addr = curBlip.blip_addr
+        loadedBlips[curBlip.arrayPosition].blip_yelp_id = curBlip.blip_yelp_id
+        loadedBlips[curBlip.arrayPosition].blip_here_id = curBlip.blip_here_id
+        loadedBlips[curBlip.arrayPosition].place_name = curBlip.place_name
+        loadedBlips[curBlip.arrayPosition].place_lat = curBlip.place_lat
+        loadedBlips[curBlip.arrayPosition].place_lon = curBlip.place_lon
+        loadedBlips[curBlip.arrayPosition].place_addr = curBlip.place_addr
+        
         //found nil wile unwrapping an optional after hitting place off of new no pic blip
         loadedBlips.sort(by: { $0.blip_dt?.compare(($1.blip_dt)!) == .orderedDescending }) // newest to oldest
-        print("WTF is nil")
     }
 
     // ----------------------------------------
@@ -133,7 +152,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             }
             print("done image encode to PFFile")
         }
-        // Set the Date
+        // Set the Date from the image EXIF if not nil dt, ts, and tz
         if self.exif?.gps?.dateStamp != nil && self.exif?.gps?.timeStamp != nil && self.exif?.gps?.timeZoneAbbreviation != nil {
             let fullDate = "\(self.exif?.gps?.dateStamp ?? "") \(self.exif?.gps?.timeStamp ?? "") \(self.exif?.gps?.timeZoneAbbreviation ?? "")"
             print("full Date is: \(fullDate)")
@@ -206,6 +225,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                             
                             if exifDateOk {
                                 self.blipDate.setTitle(newBlipFile.file_dt_txt, for: [])
+                                
                                 curBlip.blip_dt = newBlipFile.file_dt
                                 curBlip.blip_dt_txt  = newBlipFile.file_dt_txt
                             }
@@ -513,9 +533,15 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     
     // ---------------------------------------- 
     // VIEW DID LOAD
+    override func viewDidAppear(_ animated: Bool) {
+        placeLabel.text = curBlip.place_name
+        print("View Did Apear says \(curBlip.place_name)")
+    }
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        placeLabel.text = curBlip.place_name
+        print("View Did Load says \(curBlip.place_name)")
+
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(imageTapped))
         let longTapGesture = UILongPressGestureRecognizer (target: self, action: #selector(imageLongTapped))
         longTapGesture.minimumPressDuration = 0.5
@@ -549,6 +575,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             blipFileCollectionView.reloadData()
         }
     }
+    // ----------------------------------------
+    // GESTURE STUFF
     @objc func imageLongTapped(_ sender: UITapGestureRecognizer) {
         if (sender.state != UIGestureRecognizerState.ended){
             return
@@ -583,7 +611,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
 
     @objc func imageTapped(_ sender: UITapGestureRecognizer) {
-        print("TAPPED")
+        print("BlipeFile Image Tapped")
         let imageView = sender.view as! UIImageView
         let newImageView = UIImageView(image: imageView.image)
         //newImageView.frame = UIScreen.main.bounds
@@ -616,7 +644,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         print("Update Blip Mode- Instantiate the form")
         blipObjectid = curBlip.blip_id
         
-        // Instantiate text and image from Blip
+        //-- Get Labels for text and image from Blip
         blipDate.setTitle(curBlip.blip_dt_txt, for: [])
         blipPlace.setTitle(substr(stringValue: curBlip.blip_addr, forInt: 30), for: [])
 
@@ -645,7 +673,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     curFile.blip_id = blipFileRow["blip_id"] as! String
                     curFile.file_dt = blipFileRow["file_dt"] as? Date
                     curFile.file_addr = blipFileRow["file_addr"] as? String ?? ""
-                    if blipFileRow["latitude"] == nil { print("Its Nil")}
+                    if blipFileRow["latitude"] == nil { print("blipFileRow latitude is nil")}
                     curFile.file_lat = blipFileRow["latitude"] as? Double
                     curFile.file_lon = blipFileRow["longitude"] as? Double
                     if blipFileRow["imageFile"] != nil {
@@ -667,9 +695,13 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             vc.blipFiles = blipFiles
         } else if segue.identifier == "showPlacePicker" {
             let vc = segue.destination as! BlipPlacePickerVC
-            print(blipFiles.count)
-            print(blipFiles[0].file_addr)
-            vc.blipFiles = blipFiles
+
+            if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
+                print("\(lat), \(lon)")
+                vc.getYelp(latitude:lat, longitude: lon)
+                vc.getHere(latitude:lat, longitude: lon)
+            }
+            vc.runTimer()
         }
     }
 }

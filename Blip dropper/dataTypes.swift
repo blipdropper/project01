@@ -14,6 +14,16 @@ import Parse
 // turn files into UIImages
 
 // ----------------------------------------
+// Global data
+var curBlip = blipData()
+var loadedBlips = [blipData]()
+let yelpApiKey = "Bearer aeLA0m0U9cqOFqgN3CHVOQ_UaJDlB6DCysj23z-woyfmA4Mxf_nMjYO_clogiXE44VF06VohQBO0k-3TFJbEUWqxWr7fJmZJLTz2ojSmljIqsDBCfODqYTKgyK6OW3Yx"
+let hereAppId = "u0kMh9pqRbVbIRoRUDUR"
+let hereAppCode = "Sm_Nj0Z8V4_Ac-azowbweQ"
+var reloadRequired = false
+
+
+// ----------------------------------------
 // Global data structures
 public struct blipData {
     var blip_id = ""
@@ -25,6 +35,13 @@ public struct blipData {
     var blip_lon: Double?
     var blip_addr = ""
     var blip_tz_secs = 0
+    var blip_yelp_id = ""
+    var blip_here_id = ""
+    var place_lat: Double?
+    var place_lon: Double?
+    var place_addr = ""
+    var place_name = ""
+    var place_imageURL = ""
     var create_dt: Date?
     var create_dt_txt = ""
     var create_lat: Double?
@@ -74,6 +91,19 @@ public struct blipLocation {
     var strAddress = ""
     // create display permeations for blipMain, blip feed cell, map, etc
 }
+public struct blipPlace {
+    var name = ""
+    var distance: Double?
+    var address1 = ""
+    var lat: Double?
+    var lon: Double?
+    var yelpId = ""
+    var yelp: yelpBusinessSearch?
+    var yelpArrayPosition = Int() // Stand in for order that API gave it to you in and makes some loops easier
+    var hereId = ""
+    var here: hereItem?
+    var hereArrayPosition = Int()
+}
 public struct yelpBusinessSearch {
     var name = ""
     var yelpId = ""
@@ -83,8 +113,8 @@ public struct yelpBusinessSearch {
     var lon: Double?
     var phone = ""
     var zip = ""
-    var URL = ""
-    var imageUrl = ""
+    var yelpURL = ""
+    var imageURL = ""
     var address1 = ""
     var city = ""
     var state = ""
@@ -94,6 +124,7 @@ public struct yelpBusinessSearch {
     var category = ""
     var distance: Double?
     var searchAble = ""
+    var arrayPosition = Int()
 }
 public struct hereItem {
     var title = ""
@@ -105,7 +136,10 @@ public struct hereItem {
     var category = ""
     var vicinity = ""
     var distance: Double?
+    var alternativeNames = [String]()
+    var address1 = ""
     var searchAble = ""
+    var arrayPosition = Int()
 }
 
 // ----------------------------------------
@@ -120,16 +154,36 @@ func substr (stringValue: String, forInt: Int) -> String {
     let returnString = stringValue[..<stringValue.index(stringValue.startIndex, offsetBy: forInt)]
     return String(returnString)
 }
-func printYelpBusiness (arrayValue: NSArray) -> [yelpBusinessSearch] {
+func printLog (stringValue: String) {
+    let now = time2String(time: Date())
+    print("\(now): \(stringValue)")
+}
+
+// COMPARE
+func compareYelpHere (yelp: yelpBusinessSearch, here: hereItem) -> (nameMatch: Bool, addrMatch: Bool) {
+    var nameMatch = false
+    var addrMatch = false
+    return (nameMatch, addrMatch)
+}
+
+// YELP
+func parseYelpBusinessesArray (arrayValue: NSArray) -> [yelpBusinessSearch] {
     var yelpBusinesses = [yelpBusinessSearch]()
     for i in 0..<arrayValue.count {
         var curYelp = yelpBusinessSearch()
-        if let name = (arrayValue[i] as? NSDictionary)?["name"] as? String {
-            curYelp.name = name         }
+        curYelp.arrayPosition = i
         if let yelpId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
             curYelp.yelpId = yelpId     }
+        if let name = (arrayValue[i] as? NSDictionary)?["name"] as? String {
+            curYelp.name = name         }
+        if let imageURL = (arrayValue[i] as? NSDictionary)?["image_url"] as? String {
+            curYelp.imageURL = imageURL }
         if let url = (arrayValue[i] as? NSDictionary)?["url"] as? String {
-            curYelp.URL = url           }
+            curYelp.yelpURL = url       }
+        if let latitude = ((arrayValue[i] as? NSDictionary)?["coordinates"] as? NSDictionary)?["latitude"] as? Double {
+            curYelp.lat = latitude      }
+        if let longitude = ((arrayValue[i] as? NSDictionary)?["coordinates"] as? NSDictionary)?["longitude"] as? Double {
+            curYelp.lon = longitude     }
         if let addr1 = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["address1"] as? String {
             curYelp.address1 = addr1    }
         if let city = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["city"] as? String {
@@ -142,6 +196,7 @@ func printYelpBusiness (arrayValue: NSArray) -> [yelpBusinessSearch] {
             curYelp.country = country   }
         if let distance = (arrayValue[i] as? NSDictionary)?["distance"] as? Double {
             curYelp.distance = distance }
+        // phone // address match field // categories
         curYelp.address = "\(curYelp.address1) \(curYelp.city) \(curYelp.state) \(curYelp.zip) \(curYelp.country)"
         
         yelpBusinesses.append(curYelp)
@@ -150,32 +205,65 @@ func printYelpBusiness (arrayValue: NSArray) -> [yelpBusinessSearch] {
     }
     return yelpBusinesses
 }
-func yelpParseBusiness (yelpLine: yelpBusinessSearch) {
-    print("Parse would be nice")
-}
-func printHereItem (arrayValue: NSArray) {
+
+// HERE
+func printHereItem (arrayValue: NSArray) -> [hereItem]{
+    var hereItems = [hereItem]()
     for i in 0..<arrayValue.count {
         var curHere = hereItem()
+        curHere.arrayPosition = i
         if let latitude = ((arrayValue[i] as? NSDictionary)?["position"] as? NSArray)?[0] as? Double {
-            curHere.lat = latitude      }
+            curHere.lat = latitude
+        }
         if let longitude = ((arrayValue[i] as? NSDictionary)?["position"] as? NSArray)?[1] as? Double {
-            curHere.lon = longitude     }
+            curHere.lon = longitude
+        }
         if let title = (arrayValue[i] as? NSDictionary)?["title"] as? String {
-            curHere.title = title       }
+            curHere.title = title
+        }
         if let icon = (arrayValue[i] as? NSDictionary)?["icon"] as? String {
-            curHere.iconUrl = icon      }
-         if let href = (arrayValue[i] as? NSDictionary)?["href"] as? String {
-            curHere.href = href         }
-         if let category = ((arrayValue[i] as? NSDictionary)?["category"] as? NSDictionary)?["id"] as? String {
-            curHere.category = category }
-         if let hereId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
-            curHere.hereId = hereId     }
+            curHere.iconUrl = icon
+        }
+        if let vicinity = (arrayValue[i] as? NSDictionary)?["vicinity"] as? String {
+            curHere.vicinity = vicinity
+            let addressLines = vicinity.components(separatedBy: "<br/>")
+            curHere.address1 = addressLines[0]
+        }
+        if let href = (arrayValue[i] as? NSDictionary)?["href"] as? String {
+            curHere.href = href
+        }
+        if let category = ((arrayValue[i] as? NSDictionary)?["category"] as? NSDictionary)?["id"] as? String {
+            curHere.category = category
+        }
+        if let hereId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
+            curHere.hereId = hereId
+        }
         if let distance = (arrayValue[i] as? NSDictionary)?["distance"] as? Double {
-            curHere.distance = distance }
-        // address has a <br>, parse it out
+            curHere.distance = distance
+        }
+        if let alternativeNames = ((arrayValue[i] as? NSDictionary)?["alternativeNames"] as? NSArray) {
+            var nameList = [String]()
+            for i in 0..<alternativeNames.count {
+                if let altName = alternativeNames[i] as? NSDictionary {
+                    if let name = altName["name"] as? String {
+                        nameList.append(name)
+                    }
+                }
+            }
+            curHere.alternativeNames = nameList
+        }
+        
+        // address has a <br>, parse it out? 231 Franklin St<br/>San Francisco, CA 94102
+        // Alternate names //Categories
+        hereItems.append(curHere)
+
         // print("\(curHere.title) \(curHere.lat ?? 0) \(curHere.lon ?? 0) \(curHere.category) \(curHere.hereId)")
+        // print("\(curHere.distance ?? 0)")
     }
+    return hereItems
 }
+
+// TEST and DEBUGGING
 func getHereTest(latitude: Double, longitude: Double) {
     print("Run Here")
     let app_id = "u0kMh9pqRbVbIRoRUDUR"
@@ -222,7 +310,7 @@ func getYelpTest(latitude: Double, longitude: Double) {
                         let jsonResult = try JSONSerialization.jsonObject(with: urlContent, options: JSONSerialization.ReadingOptions.mutableContainers) as AnyObject
                         if let places = jsonResult["businesses"] as? NSArray {
                             var yelpBusinesses = [yelpBusinessSearch]()
-                            yelpBusinesses = printYelpBusiness(arrayValue: places)
+                            yelpBusinesses = parseYelpBusinessesArray(arrayValue: places)
                             print("Count is \(yelpBusinesses.count)")
                         }
                     } catch {
@@ -332,3 +420,28 @@ BRIAN QUESTIONS
  
 
 */
+/*
+ for yelp in self.yelpBusinesses {
+ var curBlipPlace = blipPlace()
+ curBlipPlace.name = yelp.name
+ curBlipPlace.yelpId = yelp.yelpId
+ curBlipPlace.distance = yelp.distance
+ curBlipPlace.yelpArrayPosition = yelp.arrayPosition
+ // loop through the here id, if the name/address match merge the data, and remove from the here array
+ self.blipPlaces.append(curBlipPlace)
+ }
+ for here in self.hereItems {
+ var curBlipPlace = blipPlace()
+ print("\(here.alternativeNames.count) \(here.title) \(here.lat ?? 0), \(here.lon ?? 0) \(here.distance ?? 0)")
+ for i in 0..<here.alternativeNames.count {
+ print(here.alternativeNames[i])
+ }
+ curBlipPlace.name = here.title
+ curBlipPlace.yelpId = here.hereId
+ curBlipPlace.distance = here.distance
+ curBlipPlace.hereArrayPosition = here.arrayPosition
+ self.blipPlaces.append(curBlipPlace)
+ }
+ // Null out the array to toggle
+ */
+//                var blipPlaces2 = [blipPlace]()

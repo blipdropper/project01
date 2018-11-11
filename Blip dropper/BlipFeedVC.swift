@@ -10,10 +10,6 @@
 import UIKit
 import Parse
 
-// Global data
-var curBlip = blipData()
-var loadedBlips = [blipData]()
-
 class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     // ----------------------------------------
     // IBOUTLETS, ACTIONS, and variables
@@ -44,6 +40,10 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     // ----------------------------------------
     // TABLE VIEW Controller Functions
     internal func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if loadedBlips.count == 0 {
+            reloadRequired = true
+            print("Table did appear beat the parse server call!")
+        }
         return loadedBlips.count
     }
     internal func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -158,7 +158,23 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                     curBlip.imageFile = post["imageFile"] as? PFFile
                     curBlip.blip_lat = post["latitude"] as? Double
                     curBlip.blip_lon = post["longitude"] as? Double
+                    if post["yelp_id"] != nil {
+                        curBlip.blip_yelp_id =  post["yelp_id"] as! String }
+                    if post["here_id"] != nil {
+                        curBlip.blip_here_id =  post["here_id"] as! String }
+                    if post["place_name"] != nil {
+                        curBlip.place_name = post["place_name"] as! String }
+                    if post["place_lat"] != nil {
+                        curBlip.place_lat  = post["place_lat"] as? Double }
+                    if post["place_addr"] != nil {
+                        curBlip.place_addr = post["place_addr"] as! String }
+
                     loadedBlips.append(curBlip)
+                }
+            }
+            if reloadRequired {
+                DispatchQueue.main.async {
+                    self.FeedTableView.reloadData()
                 }
             }
         })

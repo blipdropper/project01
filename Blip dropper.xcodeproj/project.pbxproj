@@ -400,6 +400,7 @@
 			baseConfigurationReference = 85320F0CD28776A1DB9B0B0C /* Pods-Blip dropper.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7ND9YWNQDX;
 				INFOPLIST_FILE = "Blip dropper/Info.plist";
@@ -409,6 +410,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "Blip-Dropper.Blip-dropper";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -419,6 +421,7 @@
 			baseConfigurationReference = 7743A6323045667FF4A2CBED /* Pods-Blip dropper.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 7ND9YWNQDX;
 				INFOPLIST_FILE = "Blip dropper/Info.plist";
@@ -428,6 +431,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "Blip-Dropper.Blip-dropper";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
