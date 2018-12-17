@@ -5,7 +5,8 @@
 //  Created by DANIEL PATRIARCA on 8/18/18.
 //  Copyright © 2018 DANIEL PATRIARCA. All rights reserved.
 
-//  This will CRASH because of all the ! force unwraps... what happens when crazy things like blip with not file happen?
+//  This will CRASH because of all the ! force unwraps... what happens when crazy things like blip with no file happen?
+//  Create blip from email... parse text, images, when, and turn image files into blip file.  A blip is really just an email and that is how to import blips
 
 import UIKit
 import Parse

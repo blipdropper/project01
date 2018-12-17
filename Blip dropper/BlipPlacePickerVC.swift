@@ -80,6 +80,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         curBlipPlace = blipPlaces[indexPath.row]
         print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
+        curBlip.mode = "newPlace"
+        curBlip.place = curBlipPlace
         curBlip.blip_yelp_id = curBlipPlace.yelpId
         curBlip.blip_here_id = curBlipPlace.hereId
         curBlip.place_lat = curBlipPlace.lat
@@ -117,7 +119,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                     var nameMatch = false
                     var addrMatch = false
                     var curBlipPlace = blipPlace()
-                    print ("----------\nChecking:\n\(yelp.name) :at \(yelp.address1) \(yelp.lat ?? 0), \(yelp.lon ?? 0)\n----------\n")
+                    print ("----------\nChecking:\n\(yelp.name) :at \(yelp.address1) \(yelp.categories) \(yelp.imageURL) \(yelp.yelpURL)\n----------\n")
 
                     for i in 0..<self.hereItems.count {
                         // print("\(i) of \(self.hereItems.count)")
@@ -281,6 +283,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
             if let tempInt = Int(tempString) {
                 curBlipPlace = blipPlaces[tempInt]
                 print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
+                curBlip.mode = "newPlace"
+                curBlip.place = curBlipPlace
                 curBlip.blip_yelp_id = curBlipPlace.yelpId
                 curBlip.blip_here_id = curBlipPlace.hereId
                 curBlip.place_lat = curBlipPlace.lat

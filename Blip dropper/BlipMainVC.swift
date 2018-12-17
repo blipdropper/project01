@@ -5,13 +5,14 @@
 //  Created by DANIEL PATRIARCA on 8/31/18.
 //  Copyright © 2018 DANIEL PATRIARCA. All rights reserved.
 //
+// Started playing with default text... need to ensure that you Paceholder/Empty toggles and you know when to post to Parse
 
 import UIKit
 import AVFoundation
 import Photos
 import Parse
 
-class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource {
+class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate {
     // ----------------------------------------
     // IBOUTLETS, ACTIONS, and variables
     private let imagePicker = UIImagePickerController()
@@ -25,23 +26,30 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     var locationSet = false
     var newBlipMode = false
     var PhotoMode = false
+    var txtIsPlaceHolder = false
     var initialActionComplete = false
     let addrDelim = " "
+    var placeHolderText = "Enter some details about your Blip!"
     var blipMode = "photo"
     var exif: Exif?
 
-    @IBOutlet weak var blipFileCollectionView: UICollectionView!
-    @IBOutlet weak var blipDate: UIButton!
+    // Delete???
     @IBOutlet weak var pickBlipDate: UIButton!
-    @IBOutlet weak var blipPlace: UIButton!
+    // ---------
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var placeLabel: UILabel!
-    
+    @IBOutlet weak var blipDate: UIButton!
+    @IBOutlet weak var blipPlace: UIButton!
+    @IBOutlet weak var blipChoosePlace: UIButton!
+    @IBOutlet weak var blipAddPhoto: UIButton!
+    @IBOutlet weak var blipOpenCamera: UIButton!
+    @IBOutlet weak var blipSave: UIButton!
+    @IBOutlet weak var blipFileCollectionView: UICollectionView!
+
     @IBAction func pickPlace(_ sender: Any) {
-        print("curBlip yelp id: \(curBlip.blip_yelp_id)")
+        curBlip.mode = ""
         if curBlip.blip_yelp_id != "" || curBlip.blip_here_id != "" {
-            print("\(curBlip.blip_yelp_id), \(curBlip.blip_here_id), \(curBlip.blip_yelp_id), ")
             self.performSegue(withIdentifier: "showPlacePicker", sender: self)
         } else {
             self.performSegue(withIdentifier: "showPlacePicker", sender: self)
@@ -71,8 +79,9 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     
     func saveBlipChanges () {
-        curBlip.blip_note = self.textView.text
-
+        if !txtIsPlaceHolder {
+            curBlip.blip_note = self.textView.text
+        }
         let query = PFQuery(className: "BlipPost")
         query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
         query.getObjectInBackground(withId: curBlip.blip_id) { (blip, error) in
@@ -115,7 +124,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         loadedBlips[curBlip.arrayPosition].place_lat = curBlip.place_lat
         loadedBlips[curBlip.arrayPosition].place_lon = curBlip.place_lon
         loadedBlips[curBlip.arrayPosition].place_addr = curBlip.place_addr
-        
+        loadedBlips[curBlip.arrayPosition].place  = curBlip.place
+
         //found nil wile unwrapping an optional after hitting place off of new no pic blip
         loadedBlips.sort(by: { $0.blip_dt?.compare(($1.blip_dt)!) == .orderedDescending }) // newest to oldest
     }
@@ -529,24 +539,45 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         let selectedCell:BlipMainCell = collectionView.cellForItem(at: indexPath) as! BlipMainCell
         
         imageView.image = selectedCell.image.image
-    }
+    } 
     
     // ---------------------------------------- 
     // VIEW DID LOAD
     override func viewDidAppear(_ animated: Bool) {
         placeLabel.text = curBlip.place_name
         print("View Did Apear says \(curBlip.place_name)")
+        
+        if curBlip.mode == "newPlace", let newBlipPlace = curBlip.place {
+            print("Add blipFile for: \(newBlipPlace.name)  \(newBlipPlace.yelp?.imageURL ?? "") " )
+            if let strURL = newBlipPlace.yelp?.imageURL {
+                let url = URL(string: strURL)
+                //let url = URL(string: "https://s3-media1.fl.yelpcdn.com/bphoto/DNJTAb3Yb3B9w20oanzk4Q/o.jpg")
+                
+                DispatchQueue.global().async {
+                    let data = try? Data(contentsOf: url!) //make sure your image in this url does exist, otherwise unwrap in a if let check / try-catch
+                    DispatchQueue.main.async {
+                        self.imageView.image = UIImage(data: data!)
+                    }
+                }
+                // does this place already exist as a blip file... maybe only keep one and overwrite it
+                // turn the url into an image
+                // place into blipFile array (position 0) tapping on IT loads a URL instead of full screen image?
+            }
+        } else {
+            print("No new place selected")
+        }
     }
     override func viewDidLoad() {
         super.viewDidLoad()
         placeLabel.text = curBlip.place_name
         print("View Did Load says \(curBlip.place_name)")
-
+        
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(imageTapped))
         let longTapGesture = UILongPressGestureRecognizer (target: self, action: #selector(imageLongTapped))
         longTapGesture.minimumPressDuration = 0.5
         longTapGesture.delaysTouchesBegan = true
         self.imagePicker.delegate = self
+        textView.delegate = self
         blipFileCollectionView.delegate = self
         blipFileCollectionView.dataSource = self
         blipFileCollectionView.addGestureRecognizer(longTapGesture)
@@ -556,8 +587,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         imageView.isUserInteractionEnabled = true
         imageView.addGestureRecognizer(tapGesture)
         //imageView.addGestureRecognizer(longTapGesture)
-        textView.layer.borderWidth = 1
-        textView.layer.borderColor = UIColor.red.cgColor
 
         if curBlip.blip_id  == "" {
             newBlipMode = true
@@ -566,15 +595,51 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.requestWhenInUseAuthorization()
             locationManager.startUpdatingLocation()
-            
+            checkPlaceHolderText()
         } else {
             newBlipMode = false
             print("Update Blip Mode: blip \(curBlip.blip_id)")
             updateBlipMode()
-            print(curBlip.blip_dt)
             blipFileCollectionView.reloadData()
         }
     }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.view.endEditing(true)
+        blipChoosePlace.isUserInteractionEnabled = true
+        blipAddPhoto.isUserInteractionEnabled = true
+        blipOpenCamera.isUserInteractionEnabled = true
+        blipSave.isUserInteractionEnabled = true
+        print("Ending touches began")
+    }
+    func textViewDidChange(_ ttextView: UITextView) {
+        //textView(Sender)
+        if(ttextView == self.textView)
+        {
+            print("textView main was used")
+        } else {
+            print("some other text view was altered?")
+        }
+        blipAltered()
+    }
+    func textViewDidEndEditing(_ textView: UITextView) {
+        print("Ending editing")
+        // checkPlaceHolderText()
+    }
+    func textViewDidBeginEditing(_ textView: UITextView) {
+        if txtIsPlaceHolder {
+            textView.text = ""
+            textView.textColor = UIColor.black
+            txtIsPlaceHolder = false
+        }
+        blipChoosePlace.isUserInteractionEnabled = false
+        blipAddPhoto.isUserInteractionEnabled = false
+        blipOpenCamera.isUserInteractionEnabled = false
+        blipSave.isUserInteractionEnabled = false
+    }
+    func blipAltered() {
+        blipSave.setTitle("SAVE", for: [])
+    }
+
     // ----------------------------------------
     // GESTURE STUFF
     @objc func imageLongTapped(_ sender: UITapGestureRecognizer) {
@@ -635,11 +700,18 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         self.tabBarController?.tabBar.isHidden = false
         sender.view?.removeFromSuperview()
     }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        self.view.endEditing(true)
+    func checkPlaceHolderText() {
+        textView.layer.borderWidth = 1
+        textView.layer.borderColor = UIColor.red.cgColor
+
+        if textView.text == "" {
+            textView.text = placeHolderText
+            textView.textColor = UIColor.gray
+            txtIsPlaceHolder = true
+        }
     }
-    
+    // ----------------------------------------
+    // UPDATE MODE
     func updateBlipMode() {
         print("Update Blip Mode- Instantiate the form")
         blipObjectid = curBlip.blip_id
@@ -649,7 +721,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         blipPlace.setTitle(substr(stringValue: curBlip.blip_addr, forInt: 30), for: [])
 
         textView.text = curBlip.blip_note
-        
+        checkPlaceHolderText()
+
         if curBlip.imageFile != nil {
             curBlip.imageFile!.getDataInBackground { (data, error) in
                 if let imageData = data {

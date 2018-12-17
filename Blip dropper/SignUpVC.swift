@@ -27,6 +27,35 @@ class SignUpVC: UIViewController {
     @IBOutlet weak var switchModeButton: UIButton!
     @IBOutlet weak var msgSignUpLogOn: UILabel!
     
+    @IBAction func resetPassword(_ sender: Any) {
+        print("You reset now? from \(userName.text ?? "")")
+/*
+        if let email = PFUser.current()?.email {
+            PFUser.current()?.email = email+".verify"
+            PFUser.current()?.saveInBackground(block: { (success, error) -> Void in
+                if success {
+                    PFUser.current()?.email = email
+                    PFUser.current()?.saveEventually()
+                }
+            })
+        }
+*/
+        PFUser.requestPasswordResetForEmail(inBackground: userName.text!) { (success: Bool, error: Error?) in
+            if success {
+                let alert = UIAlertController(title: "Success", message: "Please check your email and follow the instructions", preferredStyle: UIAlertControllerStyle.alert)
+                let ok = UIAlertAction(title: "Ok", style: UIAlertActionStyle.default, handler: { (UIAlertAction) in
+                    self.dismiss(animated: true, completion: nil)
+                })
+                alert.addAction(ok)
+                
+                self.present(alert, animated: true, completion: nil)
+            }
+            else {
+                print(error?.localizedDescription ?? "")
+            }
+        }
+    }
+    
     @IBAction func switchMode(_ sender: Any) {
         if (signUpModeActive) {
             signUpModeActive = false

@@ -42,6 +42,7 @@ public struct blipData {
     var place_addr = ""
     var place_name = ""
     var place_imageURL = ""
+    var place: blipPlace?
     var create_dt: Date?
     var create_dt_txt = ""
     var create_lat: Double?
@@ -54,6 +55,7 @@ public struct blipData {
     var imageUIImage: UIImage?
     var fileCount = 0
     var arrayPosition = Int()
+    var mode = ""
 }
 public struct blipFile {
     var file_id = ""
@@ -71,6 +73,7 @@ public struct blipFile {
     var create_addr = ""
     var imageFile: PFFile?
     var imageUIImage: UIImage?
+    var fileURL = ""
 }
 public struct blipLocation {
     var clocation = CLLocation()
@@ -97,6 +100,7 @@ public struct blipPlace {
     var address1 = ""
     var lat: Double?
     var lon: Double?
+    var iconURL = ""
     var yelpId = ""
     var yelp: yelpBusinessSearch?
     var yelpArrayPosition = Int() // Stand in for order that API gave it to you in and makes some loops easier
@@ -123,6 +127,7 @@ public struct yelpBusinessSearch {
     var iconUrl = ""
     var category = ""
     var distance: Double?
+    var categories = [String]()
     var searchAble = ""
     var arrayPosition = Int()
 }
@@ -196,6 +201,18 @@ func parseYelpBusinessesArray (arrayValue: NSArray) -> [yelpBusinessSearch] {
             curYelp.country = country   }
         if let distance = (arrayValue[i] as? NSDictionary)?["distance"] as? Double {
             curYelp.distance = distance }
+        if let categories = (arrayValue[i] as? NSDictionary)?["categories"] as? NSArray {
+            var categoryList = [String]()
+            for i in 0..<categories.count {
+                if let category = categories[i] as? NSDictionary {
+                    if let cat = category["title"] as? String {
+                        categoryList.append(cat)
+                    }
+                }
+            }
+            curYelp.categories = categoryList
+        }
+
         // phone // address match field // categories
         curYelp.address = "\(curYelp.address1) \(curYelp.city) \(curYelp.state) \(curYelp.zip) \(curYelp.country)"
         
@@ -212,6 +229,9 @@ func printHereItem (arrayValue: NSArray) -> [hereItem]{
     for i in 0..<arrayValue.count {
         var curHere = hereItem()
         curHere.arrayPosition = i
+        if let hereId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
+            curHere.hereId = hereId
+        }
         if let latitude = ((arrayValue[i] as? NSDictionary)?["position"] as? NSArray)?[0] as? Double {
             curHere.lat = latitude
         }
@@ -234,9 +254,6 @@ func printHereItem (arrayValue: NSArray) -> [hereItem]{
         }
         if let category = ((arrayValue[i] as? NSDictionary)?["category"] as? NSDictionary)?["id"] as? String {
             curHere.category = category
-        }
-        if let hereId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
-            curHere.hereId = hereId
         }
         if let distance = (arrayValue[i] as? NSDictionary)?["distance"] as? Double {
             curHere.distance = distance
