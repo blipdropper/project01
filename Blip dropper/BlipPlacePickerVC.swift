@@ -23,18 +23,23 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
     var hereDone = false
     var blipPlaces = [blipPlace]()
     var curBlipPlace = blipPlace()
-
+    var set = false
+    var test1 = 0
     var mode = ""
     
     @IBOutlet weak var map: MKMapView!
     @IBOutlet weak var searchBox: UITextField!
     @IBOutlet weak var PlaceTableView: UITableView!
     @IBOutlet weak var topLabel: UILabel!
-
+    @IBOutlet weak var searchAreaButton: UIButton!
+    
+    @IBAction func cancelPicker(_ sender: Any) {
+        self.dismiss(animated: true, completion: nil)
+    }
     @IBAction func searchArea(_ sender: Any) {
         print("Rerun the Yelp places list for map area... if an address is in the text box reset map to there... if its not an address filter?")
         print("Lat = \(map.centerCoordinate.latitude) Lon = \(map.centerCoordinate.longitude)")
-/*
+
         // find places using apple map (not interoperable with address search setting map to area)
         let searchRequest = MKLocalSearchRequest()
         searchRequest.naturalLanguageQuery = searchBox.text ?? ""
@@ -47,12 +52,21 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
             } else if searchResponse!.mapItems.count == 0  {
                 print("No search results for that")
             } else {
+                var i = 1
                 for singleItem in searchResponse!.mapItems {
-                    print(singleItem)
+                    print("\n \(i) \n \(singleItem)")
+                    print("\(singleItem.placemark)")
+                    print("\(singleItem.name)")
+                    print("\(singleItem.phoneNumber)")
+                    print("\(singleItem.url)")
+                    print("\(singleItem.timeZone)")
+                    print("\(singleItem.description)")
+                    
+                    i += 1
                 }
             }
         }
-*/
+
         // Refresh the Places list
         yelpDone = false
         hereDone = false
@@ -60,9 +74,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
         getYelp(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
         getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
         runTimer()
-    }
-    @IBAction func cancelPicker(_ sender: Any) {
-        self.dismiss(animated: true, completion: nil)
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -97,6 +108,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.map.delegate = self
         printLog(stringValue: "View Did load happened")
         PlaceTableView.dataSource = self
         if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
@@ -104,6 +116,17 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
             let mapSpan = MKCoordinateSpanMake(0.01, 0.01)
             let mapRegion = MKCoordinateRegionMake(mapCenter, mapSpan)
             self.map.setRegion(mapRegion, animated: true)
+
+            let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = coordinate
+            annotation.title = "Your Blips Location"
+            annotation.subtitle = "Subtitle Placeholder"
+            
+            self.map.addAnnotation(annotation)
+            searchAreaButton.layer.cornerRadius = 5
+            searchAreaButton.layer.borderWidth = 1
+            searchAreaButton.layer.borderColor = UIColor.black.cgColor
         }
     }
 
@@ -119,7 +142,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                     var nameMatch = false
                     var addrMatch = false
                     var curBlipPlace = blipPlace()
-                    print ("----------\nChecking:\n\(yelp.name) :at \(yelp.address1) \(yelp.categories) \(yelp.imageURL) \(yelp.yelpURL)\n----------\n")
+                    //print ("----------\nChecking:\n\(yelp.name) :at \(yelp.address1) \(yelp.categories) \(yelp.imageURL) \(yelp.yelpURL)\n----------\n")
 
                     for i in 0..<self.hereItems.count {
                         // print("\(i) of \(self.hereItems.count)")
@@ -127,7 +150,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
 
                         // Does the Here/Yelp address line 1 match
                         if yelp.address1 == here.address1 {
-                            print("YES- \(here.address1)=\(yelp.address1)")
+                            // print("YES- \(here.address1)=\(yelp.address1)")
                             addrMatch = true
                         } else {
                             //print("no - \(here.address1)=\(yelp.address1)")
@@ -135,7 +158,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                         }
                         // Does the Here/Yelp title/name match
                         if yelp.name == here.title {
-                            print("YES- \(here.title)=\(yelp.name)")
+                            //print("YES- \(here.title)=\(yelp.name)")
                             nameMatch = true
                         } else {
                             // print("no - \(here.title)=\(yelp.name)")
@@ -156,7 +179,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                             curBlipPlace.hereId = here.hereId
                             curBlipPlace.here = here
                             curBlipPlace.hereArrayPosition = here.arrayPosition
-                            print("REMOVING \(self.hereItems[i].title) from \(here.arrayPosition)")
+                            //print("REMOVING \(self.hereItems[i].title) from \(here.arrayPosition)")
                             self.hereItems.remove(at: i)
                             break
                         }
@@ -174,7 +197,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                 // Add Here only items into Blip Places (Make Func)
                 for here in self.hereItems {
                     var curBlipPlace = blipPlace()
-                    print ("\(here.arrayPosition): \(here.title)")
+                    // print ("\(here.arrayPosition): \(here.title)")
                     self.topLabel.text = "Count is \(self.hereItems.count)"
                     curBlipPlace.name = here.title
                     curBlipPlace.distance = here.distance
@@ -279,7 +302,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
     // Maps and Annotations
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
         if let tempString = (view.annotation?.subtitle) as? String {
-            print("ok... \(tempString)")
+            print("clicked on... \(tempString)")
             if let tempInt = Int(tempString) {
                 curBlipPlace = blipPlaces[tempInt]
                 print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
@@ -295,19 +318,54 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
             }
         }
     }
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        test1 += 1
+
+        if set, test1 != 5 {
+            return nil
+        } else {
+            let view = MKAnnotationView(annotation: annotation, reuseIdentifier: "annotationId")
+            view.image = UIImage(named: "locationArea50")
+            view.canShowCallout = true
+            view.displayPriority = .required
+            set = true
+            print(annotation.title)
+            return view
+        }
+    }
+
     /*
-     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-     let view = MKAnnotationView(annotation: annotation, reuseIdentifier: "annotationId")
-     view.canShowCallout = true
-     return view
-     }
      func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
      if let annotation = views.first(where: { $0.reuseIdentifier == "annotationId" })?.annotation {
      mapView.selectAnnotation(annotation, animated: true)
      }
      }
      */
-
+    /*
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if annotation is MKUserLocation
+        {
+            return nil
+        }
+        var annotationView = self.map.dequeueReusableAnnotationView(withIdentifier: "Pin")
+        if annotationView == nil{
+            annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "Pin")
+            annotationView!.canShowCallout = true
+        }else{
+            annotationView?.annotation = annotation
+        }
+        if set {
+            print("I wonder how this works")
+            //annotationView?.image = UIImage(named: "starbucks")
+        } else {
+            print("So it set the first one here")
+            annotationView?.image = UIImage(named: "locationArea50")
+        }
+        annotationView?.image = UIImage(named: "locationArea50")
+        set = true
+        return annotationView
+    }
+ */
 }
 
 

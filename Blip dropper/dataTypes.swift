@@ -59,6 +59,7 @@ public struct blipData {
 }
 public struct blipFile {
     var file_id = ""
+    var file_type = ""
     var blip_id = ""
     var user_id = ""
     var file_dt: Date?

@@ -8,11 +8,13 @@
 // Started playing with default text... need to ensure that you Paceholder/Empty toggles and you know when to post to Parse
 
 import UIKit
+import MapKit
+import CoreLocation
 import AVFoundation
 import Photos
 import Parse
 
-class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate {
+class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate, UIScrollViewDelegate {
     // ----------------------------------------
     // IBOUTLETS, ACTIONS, and variables
     private let imagePicker = UIImagePickerController()
@@ -24,6 +26,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     var location = blipLocation()
     var blipFiles = [blipFile]()
     var locationSet = false
+    var snapshotRan = false
     var newBlipMode = false
     var PhotoMode = false
     var txtIsPlaceHolder = false
@@ -36,6 +39,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     // Delete???
     @IBOutlet weak var pickBlipDate: UIButton!
     // ---------
+    @IBOutlet weak var scroller: UIScrollView!
+    @IBOutlet weak var zoomImage: UIImageView!
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var imageView: UIImageView!
     @IBOutlet weak var placeLabel: UILabel!
@@ -77,7 +82,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         saveBlipChanges()
         self.dismiss(animated: true, completion: nil)
     }
-    
     func saveBlipChanges () {
         if !txtIsPlaceHolder {
             curBlip.blip_note = self.textView.text
@@ -132,7 +136,51 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
 
     // ----------------------------------------
     // POST FILE
-    func postFile() {
+    func postLocationFile(mapImage: UIImage) {
+        if curBlip.blip_id == "" {
+            print("blip_id is nill pal")
+        } else {
+            print("blip_id = \(curBlip.blip_id) for file")
+        }
+        var newBlipFile = blipFile()
+        newBlipFile.file_type = "mapImage"
+        newBlipFile.blip_id = curBlip.blip_id
+        newBlipFile.imageUIImage = mapImage
+
+        if let imageData = UIImageJPEGRepresentation(self.choosenImage!, 0.1) {
+            print("start image encode map to PFFile")
+            if let blipFile = PFFile(name: "mapImage.jpg", data: imageData as Data) {
+                newBlipFile.imageFile = blipFile
+                // SET curBlip images if this is first file
+                if curBlip.fileCount == 0 {
+                    curBlip.imageFile = blipFile
+                    curBlip.imageUIImage = newBlipFile.imageUIImage
+                }
+            }
+            print("done image encode to PFFile")
+        }
+        // Post to Server
+        let blipFileRow = PFObject(className: "BlipFile")
+        blipFileRow["file_type"] = newBlipFile.file_type
+        blipFileRow["blip_id"] = newBlipFile.blip_id
+        blipFileRow["imageFile"] = newBlipFile.imageFile
+        blipFileRow["create_dt"] = curBlip.create_dt
+        blipFileRow.saveInBackground(block: { (success, error) in
+            if success {
+                print("Save in bg MapImage File worked")
+            } else {
+                print(error?.localizedDescription ?? "")
+            }
+        })
+        // Append to Blip File array
+        blipFiles.append(newBlipFile)
+        curBlip.fileCount = blipFiles.count
+        print("start collection reload filecount:\(curBlip.fileCount)")
+        self.blipFileCollectionView.reloadData()
+        print("done collection reload")
+    }
+    func postFile(fileType: String) {
+    // Image... get lat/lon/date
         var exifDateOk = false
         var exifPlaceOk = false
         if curBlip.blip_id == "" {
@@ -150,7 +198,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         newBlipFile.create_dt = Date()
         newBlipFile.create_dt_txt = time2String(time: newBlipFile.create_dt!)
         // Encode the image
-        if let imageData = UIImageJPEGRepresentation(self.choosenImage!, 1.0) {
+        if let imageData = UIImageJPEGRepresentation(self.choosenImage!, 0.1) {
             print("start image encode to PFFile")
             if let blipFile = PFFile(name: "image.jpg", data: imageData as Data) {
                 newBlipFile.imageFile = blipFile
@@ -282,7 +330,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         self.blipFileCollectionView.reloadData()
         print("done collection reload")
     }
-    
     func actionOpenPhoto (_ sender: UIButton) {
         let alertController = UIAlertController.init(title: "Choose Photo", message: "Choose Photo From", preferredStyle: .actionSheet)
         let photo = UIAlertAction.init(title: "Photo Library", style: .default, handler: { (action) in
@@ -397,12 +444,47 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     
     // ----------------------------------------
-    // LOCATION MANAGER
+    // LOCATION MANAGER for initial Spot
+    func setBlipLocationImage(latitude: Double, longitude: Double) {
+        print("start snapshotter")
+        snapshotRan = true
+
+        let mapSnapshotOptions = MKMapSnapshotOptions()
+        // Set the region of the map that is rendered.
+        let location = CLLocationCoordinate2DMake(latitude, longitude)
+        let region = MKCoordinateRegionMakeWithDistance(location, 1000, 1000)
+        mapSnapshotOptions.region = region
+        // Set the size of the image output.
+        mapSnapshotOptions.size = imageView.frame.size
+        
+        // Show buildings and Points of Interest on the snapshot
+        mapSnapshotOptions.showsBuildings = true
+        mapSnapshotOptions.showsPointsOfInterest = true
+        
+        let snapShotter = MKMapSnapshotter(options: mapSnapshotOptions)
+
+        snapShotter.start { (snapshot, error) in
+            if error == nil {
+                print("snapshotter thinks no error")
+                if let image = snapshot?.image {
+                    self.imageView.image = image
+                    print("snapshotter thinks image set")
+                } else {
+                    print("snapshotter didn't get image for some reason?")
+                }
+            } else {
+                print(error ?? "")
+            }
+        }
+    }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let userLocation: CLLocation = locations[0]
         currLocation = userLocation
         let latitude = userLocation.coordinate.latitude
         let longitude = userLocation.coordinate.longitude
+        if !snapshotRan {
+            setBlipLocationImage(latitude: latitude, longitude: longitude)
+        }
         location.lat = latitude
         location.lon = longitude
         location.strLatitude = String(format: "%.8f", latitude)
@@ -508,7 +590,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             checkPhotoLibraryPermission()
             print("Why didn't this work \(PhotoMode)")
         }
-        
     }
     // ----------------------------------------
     // COLLECTION VIEW FUNCTIONS
@@ -539,7 +620,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         let selectedCell:BlipMainCell = collectionView.cellForItem(at: indexPath) as! BlipMainCell
         
         imageView.image = selectedCell.image.image
-    } 
+    }
     
     // ---------------------------------------- 
     // VIEW DID LOAD
@@ -571,8 +652,18 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         super.viewDidLoad()
         placeLabel.text = curBlip.place_name
         print("View Did Load says \(curBlip.place_name)")
-        
+        scroller.delegate = self
+        scroller.maximumZoomScale = 1
+        scroller.maximumZoomScale = 4
+        scroller.contentSize = zoomImage.frame.size
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(imageTapped))
+        tapGesture.numberOfTapsRequired = 1
+        imageView.addGestureRecognizer(tapGesture)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped))
+        doubleTap.numberOfTapsRequired = 2
+        imageView.addGestureRecognizer(doubleTap)
+        imageView.isUserInteractionEnabled = true
+        tapGesture.require(toFail: doubleTap)
         let longTapGesture = UILongPressGestureRecognizer (target: self, action: #selector(imageLongTapped))
         longTapGesture.minimumPressDuration = 0.5
         longTapGesture.delaysTouchesBegan = true
@@ -583,10 +674,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         blipFileCollectionView.addGestureRecognizer(longTapGesture)
 
         print("Photo mode: \(PhotoMode)")
-        
-        imageView.isUserInteractionEnabled = true
-        imageView.addGestureRecognizer(tapGesture)
-        //imageView.addGestureRecognizer(longTapGesture)
 
         if curBlip.blip_id  == "" {
             newBlipMode = true
@@ -595,6 +682,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.requestWhenInUseAuthorization()
             locationManager.startUpdatingLocation()
+            // postInitialBlip called from location manager since we need to wait for lat/lon/geo code
             checkPlaceHolderText()
         } else {
             newBlipMode = false
@@ -639,9 +727,15 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     func blipAltered() {
         blipSave.setTitle("SAVE", for: [])
     }
-
+    
     // ----------------------------------------
-    // GESTURE STUFF
+    // GESTURE and STUFF
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        return zoomImage
+    }
+    @objc func doubleTapped(_ sender: UITapGestureRecognizer) {
+        scroller.setZoomScale(0.0, animated: true)
+    }
     @objc func imageLongTapped(_ sender: UITapGestureRecognizer) {
         if (sender.state != UIGestureRecognizerState.ended){
             return
@@ -674,31 +768,18 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             print("couldn't find index path")
         }
     }
-
     @objc func imageTapped(_ sender: UITapGestureRecognizer) {
         print("BlipeFile Image Tapped")
-        let imageView = sender.view as! UIImageView
-        let newImageView = UIImageView(image: imageView.image)
-        //newImageView.frame = UIScreen.main.bounds
-        newImageView.contentMode = .scaleAspectFit
-        newImageView.clipsToBounds = true
-        newImageView.layer.borderColor = UIColor.gray.cgColor
-        newImageView.layer.borderWidth = 3.0
-        newImageView.frame = self.view.frame
-        newImageView.backgroundColor = .black
-        newImageView.isUserInteractionEnabled = true
-        newImageView.image = imageView.image
+        zoomImage.backgroundColor = .black
+        zoomImage.isUserInteractionEnabled = true
+        zoomImage.image = imageView.image
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissFullscreenImage))
-        newImageView.addGestureRecognizer(tap)
-        self.view.addSubview(newImageView)
-//        self.navigationController?.isNavigationBarHidden = true
-//        self.tabBarController?.tabBar.isHidden = true
+        zoomImage.addGestureRecognizer(tap)
+        scroller.isHidden = false
     }
-    
     @objc func dismissFullscreenImage(_ sender: UITapGestureRecognizer) {
-        self.navigationController?.isNavigationBarHidden = false
-        self.tabBarController?.tabBar.isHidden = false
-        sender.view?.removeFromSuperview()
+        scroller.isHidden = true
+        scroller.setZoomScale(0.0, animated: true)
     }
     func checkPlaceHolderText() {
         textView.layer.borderWidth = 1
@@ -710,6 +791,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             txtIsPlaceHolder = true
         }
     }
+    
     // ----------------------------------------
     // UPDATE MODE
     func updateBlipMode() {
@@ -743,6 +825,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 var curFile = blipFile()
                 for blipFileRow in files {
                     curFile.file_id = (blipFileRow.objectId!)
+                    curFile.file_type = blipFileRow["file_type"] as? String ?? ""
                     curFile.blip_id = blipFileRow["blip_id"] as! String
                     curFile.file_dt = blipFileRow["file_dt"] as? Date
                     curFile.file_addr = blipFileRow["file_addr"] as? String ?? ""
@@ -818,20 +901,19 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
                         }
                         print("done exif on selected image")
                         // POST SELECTED FILE TO SERVER
-                        self.postFile()
+                        self.postFile(fileType: "image")
                     } else {
-                        self.postFile()
+                        self.postFile(fileType: "image")
                     }
                 }
             } else if imagePicker.sourceType == .camera {
-                postFile()
+                postFile(fileType: "image")
             }
         } else {
             print("Something went wrong with imagePickerController")
         }
         self.dismiss(animated: true, completion: nil)
     }
-    
     func getAssetThumbnail(asset: PHAsset) -> UIImage {
         let manager = PHImageManager.default()
         let option = PHImageRequestOptions()
