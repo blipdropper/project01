@@ -15,7 +15,7 @@
 import UIKit
 import MapKit
 
-class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataSource, MKMapViewDelegate{
+class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDelegate, UITableViewDataSource, MKMapViewDelegate{
     var blipFiles = [blipFile]()
     var yelpBusinesses = [yelpBusinessSearch]()
     var yelpDone = false
@@ -40,6 +40,20 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
         print("Rerun the Yelp places list for map area... if an address is in the text box reset map to there... if its not an address filter?")
         print("Lat = \(map.centerCoordinate.latitude) Lon = \(map.centerCoordinate.longitude)")
 
+        // Refresh the Places list
+        yelpDone = false
+        hereDone = false
+        blipPlaces = [blipPlace]()
+        getYelp(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
+        getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
+        runTimer()
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.view.endEditing(true)
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         // find places using apple map (not interoperable with address search setting map to area)
         let searchRequest = MKLocalSearchRequest()
         searchRequest.naturalLanguageQuery = searchBox.text ?? ""
@@ -53,27 +67,39 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                 print("No search results for that")
             } else {
                 var i = 1
+                var searchReturnPlaces = [blipPlace]()
+
                 for singleItem in searchResponse!.mapItems {
-                    print("\n \(i) \n \(singleItem)")
+                    var curBlipPlace = blipPlace()
+            
+                    let addr1 = placeMark2Addr1(placemark: singleItem.placemark)
+                    // Add these search items to blipPlaces array
+                    // opens in apple map app singleItem.openInMaps(launchOptions: nil)
+                    curBlipPlace.type = "apple_search"
+                    curBlipPlace.name = singleItem.name ?? ""
+                    curBlipPlace.lat = singleItem.placemark.coordinate.latitude
+                    curBlipPlace.lon = singleItem.placemark.coordinate.longitude
+                    curBlipPlace.address1 = addr1
+                    curBlipPlace.url = singleItem.url?.absoluteString ?? ""
+                    print (curBlipPlace.url)
+                    searchReturnPlaces.append(curBlipPlace)
+                    /*
                     print("\(singleItem.placemark)")
                     print("\(singleItem.name)")
                     print("\(singleItem.phoneNumber)")
-                    print("\(singleItem.url)")
+                    print("\(singleItem.url?.absoluteString)")
                     print("\(singleItem.timeZone)")
-                    print("\(singleItem.description)")
-                    
+                    */
                     i += 1
                 }
+                self.blipPlaces = searchReturnPlaces + self.blipPlaces
+                self.PlaceTableView.reloadData()
             }
         }
+        
+        textField.resignFirstResponder()
 
-        // Refresh the Places list
-        yelpDone = false
-        hereDone = false
-        blipPlaces = [blipPlace]()
-        getYelp(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
-        getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
-        runTimer()
+        return true
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -99,6 +125,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
         curBlip.place_lon = curBlipPlace.lon
         curBlip.place_addr = curBlipPlace.address1
         curBlip.place_name = curBlipPlace.name
+        curBlip.place_url = curBlipPlace.url
+        print(curBlip.place_url)
         self.dismiss(animated: true, completion: nil)
     }
     
@@ -108,8 +136,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.map.delegate = self
         printLog(stringValue: "View Did load happened")
+        self.map.delegate = self
         PlaceTableView.dataSource = self
         if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
             let mapCenter = CLLocationCoordinate2DMake(lat, lon)
@@ -133,7 +161,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
     func runTimer() {
         var runCount = 0
         printLog(stringValue: "Timer function received   ")
-
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { timer in
             printLog(stringValue: "Timer for runcount \(runCount) fired")
             runCount += 1
@@ -189,6 +216,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                     curBlipPlace.address1 = yelp.address1
                     curBlipPlace.lat = yelp.lat
                     curBlipPlace.lon = yelp.lon
+                    curBlipPlace.url = yelp.yelpURL
                     curBlipPlace.yelpId = yelp.yelpId
                     curBlipPlace.yelp = yelp
                     curBlipPlace.yelpArrayPosition = yelp.arrayPosition
@@ -314,6 +342,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITableViewDataS
                 curBlip.place_lon = curBlipPlace.lon
                 curBlip.place_addr = curBlipPlace.address1
                 curBlip.place_name = curBlipPlace.name
+                curBlip.place_url = curBlipPlace.url
                 self.dismiss(animated: true, completion: nil)
             }
         }

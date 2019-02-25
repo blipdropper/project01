@@ -169,6 +169,8 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                         curBlip.place_lat  = post["place_lat"] as? Double }
                     if post["place_addr"] != nil {
                         curBlip.place_addr = post["place_addr"] as! String }
+                    if post["place_url"] != nil {
+                        curBlip.place_url = post["place_url"] as! String }
 
                     loadedBlips.append(curBlip)
                 }

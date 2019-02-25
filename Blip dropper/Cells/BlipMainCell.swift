@@ -9,6 +9,9 @@
 import UIKit
 
 class BlipMainCell: UICollectionViewCell {
+    var curBlipFile = blipFile()
+
     @IBOutlet weak var image: UIImageView!
+    @IBOutlet weak var cellLabel: UILabel!
     
 }

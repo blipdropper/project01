@@ -41,6 +41,7 @@ public struct blipData {
     var place_lon: Double?
     var place_addr = ""
     var place_name = ""
+    var place_url = ""
     var place_imageURL = ""
     var place: blipPlace?
     var create_dt: Date?
@@ -101,6 +102,7 @@ public struct blipPlace {
     var address1 = ""
     var lat: Double?
     var lon: Double?
+    var url = ""
     var iconURL = ""
     var yelpId = ""
     var yelp: yelpBusinessSearch?
@@ -108,6 +110,7 @@ public struct blipPlace {
     var hereId = ""
     var here: hereItem?
     var hereArrayPosition = Int()
+    var type = ""
 }
 public struct yelpBusinessSearch {
     var name = ""
@@ -163,6 +166,56 @@ func substr (stringValue: String, forInt: Int) -> String {
 func printLog (stringValue: String) {
     let now = time2String(time: Date())
     print("\(now): \(stringValue)")
+}
+func placeMark2Addr1 (placemark: CLPlacemark) -> String {
+    let addrDelim = " "
+    var address1 = ""
+    
+    if placemark.subThoroughfare != nil {
+        address1 += placemark.subThoroughfare! + " "
+    }
+    if placemark.thoroughfare != nil {
+        address1 += placemark.thoroughfare! + addrDelim
+    }
+    return address1
+}
+
+func placeMark2Postal (placemark: CLPlacemark) -> String {
+    let addrDelim = " "
+    var address = ""
+    
+    address = placeMark2Addr1(placemark: placemark)
+
+    if placemark.subLocality != nil {
+        address += placemark.subLocality! + addrDelim
+    }
+    if placemark.subAdministrativeArea != nil {
+        address += placemark.administrativeArea! + addrDelim
+    }
+    if placemark.postalCode != nil {
+        address += placemark.postalCode! + addrDelim
+    }
+    if placemark.country != nil {
+        address += placemark.country! + addrDelim
+    }
+
+    return address
+}
+func runDelayTimer() {
+    // turn current date into an integer
+    // calculate end time of period
+    // have emergency escape on loop count or modding the end of the time so that last digit will be 0 1-10 times or something
+    var runCount = 0
+    printLog(stringValue: "Delay Timer function received   ")
+
+    Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { timer in
+        printLog(stringValue: "Timer for runcount \(runCount) fired")
+        runCount += 1
+        if runCount == 20 { //
+            print("This took too long, notify user and die cleanly")
+            timer.invalidate()
+        }
+    }
 }
 
 // COMPARE
@@ -349,6 +402,25 @@ https://places.cit.api.here.com/places/v1/autosuggest
 &app_id=u0kMh9pqRbVbIRoRUDUR
 &app_code=Sm_Nj0Z8V4_Ac-azowbweQ
 """
+/* MEMORY QUEUES
+ 1.0 If you can't Log On then
+ 2.0 Read Available Blips
+ 3.0 Get Details for selected Blip
+ 4.0 Read current location
+ 5.0 Reverse GeoCode locatoin
+ 6.0 Get jpg of map location
+ 7.0 Edit Blip information (description), (file add)
+ 8.0 Get nearbye locations from yelp
+ 8.1 Get Apple locatoions from search
+ 8.2 Get image from location image metadata
+ */
+
+/*
+When I come back from selecting a yelp place I get use their image as icon for place file type
+When ever text is read, evaluate if there is a url... ask if they want to add te URL.  Only ask once
+Put a 3 circles buton at the bottom right of the text box, on tap make the text full box screen and scrollable with DONE to go back
+/*
+
 /*
  yelp and here are blipdropper S$etupu4
  Client ID Yelp
@@ -462,4 +534,5 @@ BRIAN QUESTIONS
  }
  // Null out the array to toggle
  */
-//                var blipPlaces2 = [blipPlace]()
+ //                var blipPlaces2 = [blipPlace]()*/*/
+
