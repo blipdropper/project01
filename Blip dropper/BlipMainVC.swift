@@ -638,7 +638,11 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         }
         
         if blipFiles[indexPath.row].file_type == "mapImage" {
+            print ("map image YES")
             cell.cellLabel.text = curBlip.place_name
+        } else {
+            print ("map image NO")
+            cell.cellLabel.text = ""
         }
         return cell
     }
@@ -682,14 +686,15 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             print("Add blipFile for: \(newBlipPlace.name)  \(newBlipPlace.yelp?.imageURL ?? "") " )
             if let strURL = newBlipPlace.yelp?.imageURL {
                 let url = URL(string: strURL)
-                //let url = URL(string: "https://s3-media1.fl.yelpcdn.com/bphoto/DNJTAb3Yb3B9w20oanzk4Q/o.jpg")
-                
+                // Get place image snippet, needs error checking
+                /*
                 DispatchQueue.global().async {
                     let data = try? Data(contentsOf: url!) //make sure your image in this url does exist, otherwise unwrap in a if let check / try-catch
                     DispatchQueue.main.async {
                         self.imageView.image = UIImage(data: data!)
                     }
                 }
+                */
                 // does this place already exist as a blip file... maybe only keep one and overwrite it
                 // turn the url into an image
                 // place into blipFile array (position 0) tapping on IT loads a URL instead of full screen image?

@@ -68,31 +68,47 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             } else {
                 var i = 1
                 var searchReturnPlaces = [blipPlace]()
+                self.map.removeAnnotations(self.map.annotations)
 
                 for singleItem in searchResponse!.mapItems {
                     var curBlipPlace = blipPlace()
             
                     let addr1 = placeMark2Addr1(placemark: singleItem.placemark)
-                    // Add these search items to blipPlaces array
-                    // opens in apple map app singleItem.openInMaps(launchOptions: nil)
+                    // To open apple map: singleItem.openInMaps(launchOptions: nil)
+                    let placeCoordinate = CLLocation(latitude: singleItem.placemark.coordinate.latitude, longitude: singleItem.placemark.coordinate.longitude)
+                    if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
+                        let coordinate = CLLocation(latitude: lat, longitude: lon)
+                        let distanceInMeters = coordinate.distance(from: placeCoordinate)
+                        curBlipPlace.distance = distanceInMeters
+                    }
                     curBlipPlace.type = "apple_search"
                     curBlipPlace.name = singleItem.name ?? ""
                     curBlipPlace.lat = singleItem.placemark.coordinate.latitude
                     curBlipPlace.lon = singleItem.placemark.coordinate.longitude
                     curBlipPlace.address1 = addr1
                     curBlipPlace.url = singleItem.url?.absoluteString ?? ""
+                    
                     print (curBlipPlace.url)
                     searchReturnPlaces.append(curBlipPlace)
-                    /*
-                    print("\(singleItem.placemark)")
-                    print("\(singleItem.name)")
-                    print("\(singleItem.phoneNumber)")
-                    print("\(singleItem.url?.absoluteString)")
-                    print("\(singleItem.timeZone)")
-                    */
+                
                     i += 1
                 }
-                self.blipPlaces = searchReturnPlaces + self.blipPlaces
+                // Add Searched Locations to yelp places list
+                // self.blipPlaces = searchReturnPlaces + self.blipPlaces
+                self.blipPlaces = searchReturnPlaces  // Have "load nearbye places" table tail
+
+                for i in 0..<self.blipPlaces.count {
+                    if let lat = self.blipPlaces[i].lat, let lon = self.blipPlaces[i].lon {
+                        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                        let annotation = MKPointAnnotation()
+                        annotation.coordinate = coordinate
+                        annotation.title = self.blipPlaces[i].name
+                        annotation.subtitle = String(i)
+                        
+                        self.map.addAnnotation(annotation)
+                    }
+                }
+
                 self.PlaceTableView.reloadData()
             }
         }
@@ -107,14 +123,16 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = PlaceTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipFileTVCell
+        let cell = PlaceTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipPlaceTVCell
         cell.mode = "select"
         cell.placeLabel.text = "\(indexPath.row): \(blipPlaces[indexPath.row].name) - \(blipPlaces[indexPath.row].distance ?? 999)"
         //\(blipPlaces[indexPath.row].yelpArrayPosition) \(blipPlaces[indexPath.row].hereArrayPosition)- \(blipPlaces[indexPath.row].distance ?? 999) - \(blipPlaces[indexPath.row].name)"
+
         return cell
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        // how can you move this to a button tap on the tableview cell class
         curBlipPlace = blipPlaces[indexPath.row]
         print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
         curBlip.mode = "newPlace"
@@ -151,10 +169,11 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             annotation.title = "Your Blips Location"
             annotation.subtitle = "Subtitle Placeholder"
             
-            self.map.addAnnotation(annotation)
+            // self.map.addAnnotation(annotation)
             searchAreaButton.layer.cornerRadius = 5
             searchAreaButton.layer.borderWidth = 1
             searchAreaButton.layer.borderColor = UIColor.black.cgColor
+            
         }
     }
 
@@ -235,7 +254,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                     curBlipPlace.hereId = here.hereId
                     curBlipPlace.here = here
                     curBlipPlace.hereArrayPosition = here.arrayPosition
-// Commented out to reduce annotation clutter
+                    // Commented out to reduce annotation clutter
                     //                    self.blipPlaces.append(curBlipPlace)
                 }
                 // Add a spot on the array for Add Your Own Place
@@ -359,7 +378,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             view.displayPriority = .required
             set = true
             print(annotation.title)
-            return view
+            return nil
         }
     }
 

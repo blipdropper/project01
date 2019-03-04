@@ -1,5 +1,5 @@
 //
-//  BlipFileTVCell.swift
+//  BlipPlaceTVCell.swift
 //  Blip dropper
 //
 //  Created by DANIEL PATRIARCA on 10/8/18.
@@ -8,10 +8,15 @@
 
 import UIKit
 
-class BlipFileTVCell: UITableViewCell {
+class BlipPlaceTVCell: UITableViewCell {
     var mode: String?
     
     @IBOutlet weak var placeLabel: UILabel!
+    @IBOutlet weak var placeInfoButton: UIButton!
+    
+    @IBAction func placeInfo(_ sender: Any) {
+        print("You hit info for \(placeLabel.text ?? "")")
+    }
     
     override func awakeFromNib() {
         super.awakeFromNib()

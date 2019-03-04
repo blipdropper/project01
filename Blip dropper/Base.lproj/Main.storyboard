@@ -460,7 +460,7 @@
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="fileCell" id="I4x-Hn-D8r" customClass="BlipFileTVCell" customModule="Blip_dropper" customModuleProvider="target">
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="fileCell" id="I4x-Hn-D8r" customClass="BlipPlaceTVCell" customModule="Blip_dropper" customModuleProvider="target">
                                         <rect key="frame" x="0.0" y="28" width="375" height="44"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="I4x-Hn-D8r" id="Fej-5B-5dG">
@@ -534,7 +534,7 @@
                                     <constraint firstAttribute="height" constant="332" id="eNj-6N-4Gb"/>
                                 </constraints>
                                 <prototypes>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="fileCell" id="gek-3O-qzw" customClass="BlipFileTVCell" customModule="Blip_dropper" customModuleProvider="target">
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="fileCell" id="gek-3O-qzw" customClass="BlipPlaceTVCell" customModule="Blip_dropper" customModuleProvider="target">
                                         <rect key="frame" x="0.0" y="28" width="375" height="44"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="gek-3O-qzw" id="Jf9-1Y-HRf">
@@ -542,20 +542,26 @@
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="23p-cP-5S6">
-                                                    <rect key="frame" x="16" y="5" width="344" height="33.666666666666664"/>
+                                                    <rect key="frame" x="16" y="5" width="300" height="33.666666666666664"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
+                                                <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nTr-E6-vBe">
+                                                    <rect key="frame" x="324" y="6" width="38" height="30"/>
+                                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                    <state key="normal" title="info..."/>
+                                                </button>
                                             </subviews>
                                             <constraints>
                                                 <constraint firstItem="23p-cP-5S6" firstAttribute="leading" secondItem="Jf9-1Y-HRf" secondAttribute="leading" constant="16" id="9bz-Su-hTO"/>
                                                 <constraint firstItem="23p-cP-5S6" firstAttribute="top" secondItem="Jf9-1Y-HRf" secondAttribute="top" constant="5" id="eef-5R-eFb"/>
                                                 <constraint firstAttribute="bottom" secondItem="23p-cP-5S6" secondAttribute="bottom" constant="5" id="jQ3-s2-3F5"/>
-                                                <constraint firstAttribute="trailing" secondItem="23p-cP-5S6" secondAttribute="trailing" constant="15" id="tLe-Ny-jDU"/>
+                                                <constraint firstAttribute="trailing" secondItem="23p-cP-5S6" secondAttribute="trailing" constant="59" id="tLe-Ny-jDU"/>
                                             </constraints>
                                         </tableViewCellContentView>
                                         <connections>
+                                            <outlet property="placeInfoButton" destination="nTr-E6-vBe" id="u1i-29-pr3"/>
                                             <outlet property="placeLabel" destination="23p-cP-5S6" id="xqd-dy-gdS"/>
                                         </connections>
                                     </tableViewCell>

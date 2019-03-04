@@ -21,7 +21,7 @@ class BlipDataPickerVC: UIViewController, UITableViewDelegate, UITableViewDataSo
         return blipFiles.count
     }
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = FileTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipFileTVCell
+        let cell = FileTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipPlaceTVCell
         cell.mode = "select"
         cell.placeLabel.text = "\(indexPath.row) - \(blipFiles[indexPath.row].file_addr)"
         
