@@ -535,4 +535,36 @@ BRIAN QUESTIONS
  // Null out the array to toggle
  */
  //                var blipPlaces2 = [blipPlace]()*/*/
+/*
+ func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+ if let annotation = views.first(where: { $0.reuseIdentifier == "annotationId" })?.annotation {
+ mapView.selectAnnotation(annotation, animated: true)
+ }
+ }
+ */
+/*
+ func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+ if annotation is MKUserLocation
+ {
+ return nil
+ }
+ var annotationView = self.map.dequeueReusableAnnotationView(withIdentifier: "Pin")
+ if annotationView == nil{
+ annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "Pin")
+ annotationView!.canShowCallout = true
+ }else{
+ annotationView?.annotation = annotation
+ }
+ if set {
+ print("I wonder how this works")
+ //annotationView?.image = UIImage(named: "starbucks")
+ } else {
+ print("So it set the first one here")
+ annotationView?.image = UIImage(named: "locationArea50")
+ }
+ annotationView?.image = UIImage(named: "locationArea50")
+ set = true
+ return annotationView
+ }
+ */
 

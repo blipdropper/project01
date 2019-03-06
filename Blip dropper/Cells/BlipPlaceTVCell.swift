@@ -8,15 +8,23 @@
 
 import UIKit
 
+protocol customCellDelegate {
+    func didTapButton1(msg: String, indexPath: Int)
+    func didTapButton2(alert: String)
+}
+
 class BlipPlaceTVCell: UITableViewCell {
     var mode: String?
-    
+    var delegate: customCellDelegate?
+    var rowNumber = Int()
+
     @IBOutlet weak var placeLabel: UILabel!
     @IBOutlet weak var placeInfoButton: UIButton!
-    
-    @IBAction func placeInfo(_ sender: Any) {
-        print("You hit info for \(placeLabel.text ?? "")")
+    @IBAction func clickInfo(_ sender: Any) {
+        print("click info tapped")
+        delegate?.didTapButton1(msg: "Info 1 tapped", indexPath: rowNumber)
     }
+    
     
     override func awakeFromNib() {
         super.awakeFromNib()

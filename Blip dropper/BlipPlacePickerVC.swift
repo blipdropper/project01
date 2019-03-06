@@ -125,6 +125,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = PlaceTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipPlaceTVCell
         cell.mode = "select"
+        cell.delegate = self
+        cell.rowNumber = indexPath.row
         cell.placeLabel.text = "\(indexPath.row): \(blipPlaces[indexPath.row].name) - \(blipPlaces[indexPath.row].distance ?? 999)"
         //\(blipPlaces[indexPath.row].yelpArrayPosition) \(blipPlaces[indexPath.row].hereArrayPosition)- \(blipPlaces[indexPath.row].distance ?? 999) - \(blipPlaces[indexPath.row].name)"
 
@@ -377,43 +379,24 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             view.canShowCallout = true
             view.displayPriority = .required
             set = true
-            print(annotation.title)
-            return nil
-        }
-    }
 
-    /*
-     func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
-     if let annotation = views.first(where: { $0.reuseIdentifier == "annotationId" })?.annotation {
-     mapView.selectAnnotation(annotation, animated: true)
-     }
-     }
-     */
-    /*
-    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-        if annotation is MKUserLocation
-        {
             return nil
         }
-        var annotationView = self.map.dequeueReusableAnnotationView(withIdentifier: "Pin")
-        if annotationView == nil{
-            annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: "Pin")
-            annotationView!.canShowCallout = true
-        }else{
-            annotationView?.annotation = annotation
-        }
-        if set {
-            print("I wonder how this works")
-            //annotationView?.image = UIImage(named: "starbucks")
-        } else {
-            print("So it set the first one here")
-            annotationView?.image = UIImage(named: "locationArea50")
-        }
-        annotationView?.image = UIImage(named: "locationArea50")
-        set = true
-        return annotationView
     }
- */
+}
+
+extension BlipPlacePickerVC: customCellDelegate {
+    func didTapButton1(msg: String, indexPath: Int) {
+        self.topLabel.text = "\(msg)... selected row \(indexPath)"
+        
+        print ("selected row \(indexPath)")
+        
+    }
+    
+    func didTapButton2(alert: String) {
+        self.topLabel.text = alert
+    }
+    
 }
 
 

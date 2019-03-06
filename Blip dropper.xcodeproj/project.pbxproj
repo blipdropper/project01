@@ -17,9 +17,9 @@
 		A26167BE216B5490003E7FD9 /* BlipPlaceTVCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26167BD216B5490003E7FD9 /* BlipPlaceTVCell.swift */; };
 		A294F7FF214DB65400424038 /* BlipMainVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A294F7FE214DB65400424038 /* BlipMainVC.swift */; };
 		A29E43482128D67100B61F10 /* BlipFeedVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29E43472128D67100B61F10 /* BlipFeedVC.swift */; };
+		A2E4717D222D1A1000233DEA /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A2E4717B222D1A1000233DEA /* Main.storyboard */; };
 		A2F43C6F21212936005EF8D7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F43C6E21212936005EF8D7 /* AppDelegate.swift */; };
 		A2F43C7121212936005EF8D7 /* SignUpVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F43C7021212936005EF8D7 /* SignUpVC.swift */; };
-		A2F43C7421212936005EF8D7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A2F43C7221212936005EF8D7 /* Main.storyboard */; };
 		A2F43C7721212936005EF8D7 /* Blip_dropper.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A2F43C7521212936005EF8D7 /* Blip_dropper.xcdatamodeld */; };
 		A2F43C7921212936005EF8D7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2F43C7821212936005EF8D7 /* Assets.xcassets */; };
 		A2F43C7C21212936005EF8D7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A2F43C7A21212936005EF8D7 /* LaunchScreen.storyboard */; };
@@ -39,10 +39,10 @@
 		A26167BD216B5490003E7FD9 /* BlipPlaceTVCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlipPlaceTVCell.swift; sourceTree = "<group>"; };
 		A294F7FE214DB65400424038 /* BlipMainVC.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlipMainVC.swift; sourceTree = "<group>"; };
 		A29E43472128D67100B61F10 /* BlipFeedVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlipFeedVC.swift; sourceTree = "<group>"; };
+		A2E4717C222D1A1000233DEA /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		A2F43C6B21212936005EF8D7 /* Blip dropper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Blip dropper.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2F43C6E21212936005EF8D7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A2F43C7021212936005EF8D7 /* SignUpVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpVC.swift; sourceTree = "<group>"; };
-		A2F43C7321212936005EF8D7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		A2F43C7621212936005EF8D7 /* Blip_dropper.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Blip_dropper.xcdatamodel; sourceTree = "<group>"; };
 		A2F43C7821212936005EF8D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A2F43C7B21212936005EF8D7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -103,7 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				A2F43C7A21212936005EF8D7 /* LaunchScreen.storyboard */,
-				A2F43C7221212936005EF8D7 /* Main.storyboard */,
+				A2E4717B222D1A1000233DEA /* Main.storyboard */,
 				A2F43C6E21212936005EF8D7 /* AppDelegate.swift */,
 				A2F43C7021212936005EF8D7 /* SignUpVC.swift */,
 				A29E43472128D67100B61F10 /* BlipFeedVC.swift */,
@@ -189,9 +189,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A2E4717D222D1A1000233DEA /* Main.storyboard in Resources */,
 				A2F43C7C21212936005EF8D7 /* LaunchScreen.storyboard in Resources */,
 				A2F43C7921212936005EF8D7 /* Assets.xcassets in Resources */,
-				A2F43C7421212936005EF8D7 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -262,10 +262,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		A2F43C7221212936005EF8D7 /* Main.storyboard */ = {
+		A2E4717B222D1A1000233DEA /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				A2F43C7321212936005EF8D7 /* Base */,
+				A2E4717C222D1A1000233DEA /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
