@@ -139,6 +139,7 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
         let query = PFQuery(className: "BlipPost")
         query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
         query.order(byDescending: "blip_date")
+        query.limit = 1000
         query.findObjectsInBackground(block: { (objects, error) in
         var strDate = ""
             // Build Data Arrays
@@ -156,7 +157,8 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                     curBlip.blip_addr = post["blip_address"] as! String
                     curBlip.blip_note = post["blip_msg"] as! String
                     curBlip.blip_id = (post.objectId!)
-                    curBlip.imageFile = post["imageFile"] as? PFFile
+                    curBlip.imageFile = post["imageFile"] as? PFFileObject
+                    curBlip.imageThumbFile = post["imageThumbFile"] as? PFFileObject
                     curBlip.blip_lat = post["latitude"] as? Double
                     curBlip.blip_lon = post["longitude"] as? Double
                     if post["yelp_id"] != nil {

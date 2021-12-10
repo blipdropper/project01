@@ -93,6 +93,9 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 if curBlip.imageFile != nil {
                     blip!["imageFile"] = curBlip.imageFile
                 }
+                if curBlip.imageThumbFile != nil {
+                    blip!["imageThumbFile"] = curBlip.imageThumbFile
+                }
                 blip!["blip_msg"] = curBlip.blip_note
                 blip!["blip_date"] = curBlip.blip_dt
                 // HOW ARE YOU GOING TO GET THE TZ SECONDS FROM EXIF?  HOW IS THIS USED
@@ -116,6 +119,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         }
         loadedBlips[curBlip.arrayPosition].blip_note = curBlip.blip_note
         loadedBlips[curBlip.arrayPosition].imageFile = curBlip.imageFile
+        loadedBlips[curBlip.arrayPosition].imageThumbFile = curBlip.imageThumbFile
         loadedBlips[curBlip.arrayPosition].imageUIImage = curBlip.imageUIImage
         loadedBlips[curBlip.arrayPosition].blip_dt = curBlip.blip_dt
         //loadedBlips[curBlip.arrayPosition].blip_tz_secs = curBlip.blip_tz_secs
@@ -141,7 +145,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     func postLocationFile(mapImage: UIImage) {
         // Check Blip id set
         if curBlip.blip_id == "" {
-            print("blip_id is nill pal")
+            print("blip_id is nil pal")
         } else if snapshotRan != "done" {
             print("snapshot image wasn't set yet")
         } else {
@@ -154,11 +158,13 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
 
         if let imageData = UIImageJPEGRepresentation(mapImage, 0.1) {
             print("start image encode map to PFFile")
-            if let blipFile = PFFile(name: "mapImage.jpg", data: imageData as Data) {
+            if let blipFile = PFFileObject(name: "mapImage.jpg", data: imageData as Data) {
                 newBlipFile.imageFile = blipFile
+                newBlipFile.imageThumbFile = blipFile
                 // SET curBlip images if this is first file
                 if curBlip.fileCount == 0 {
                     curBlip.imageFile = blipFile
+                    curBlip.imageThumbFile = blipFile
                     curBlip.imageUIImage = newBlipFile.imageUIImage
                 }
             }
@@ -169,6 +175,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         blipFileRow["file_type"] = newBlipFile.file_type
         blipFileRow["blip_id"] = newBlipFile.blip_id
         blipFileRow["imageFile"] = newBlipFile.imageFile
+        blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
         blipFileRow["create_dt"] = curBlip.create_dt
         blipFileRow.saveInBackground(block: { (success, error) in
             if success {
@@ -189,7 +196,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         var exifDateOk = false
         var exifPlaceOk = false
         if curBlip.blip_id == "" {
-            print("blip_id is nill pal")
+            print("blip_id is nil pal")
         } else {
             print("blip_id = \(curBlip.blip_id) for file")
         }
@@ -205,12 +212,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         // Encode the image
         if let imageData = UIImageJPEGRepresentation(self.choosenImage!, 0.1) {
             print("start image encode to PFFile")
-            if let blipFile = PFFile(name: "image.jpg", data: imageData as Data) {
+            if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
                 newBlipFile.imageFile = blipFile
+                newBlipFile.imageThumbFile = blipFile
                 // SET curBlip images if this is first file
                 if curBlip.fileCount <= 1 {
                     curBlip.imageFile = blipFile
                     curBlip.imageUIImage = newBlipFile.imageUIImage
+                    curBlip.imageThumbFile = blipFile
                 }
             }
             print("done image encode to PFFile")
@@ -270,6 +279,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                         let blipFileRow = PFObject(className: "BlipFile")
                         blipFileRow["blip_id"] = newBlipFile.blip_id
                         blipFileRow["imageFile"] = newBlipFile.imageFile
+                        blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
                         blipFileRow["create_dt"] = newBlipFile.create_dt
                         blipFileRow["latitude"] = newBlipFile.file_lat
                         blipFileRow["longitude"] = newBlipFile.file_lon
@@ -312,6 +322,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             let blipFileRow = PFObject(className: "BlipFile")
             blipFileRow["blip_id"] = newBlipFile.blip_id
             blipFileRow["imageFile"] = newBlipFile.imageFile
+            blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
             blipFileRow["create_dt"] = newBlipFile.create_dt
             blipFileRow.saveInBackground(block: { (success, error) in
                 if success {
@@ -421,8 +432,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 case .notDetermined:
                     self.alert("Unexpected error occured for accessing photo library")
                     break
+                case .limited:
+                    self.openPhotoPicker()
+                    break
                 }
             }
+        case .limited:
+            self.openPhotoPicker()
+            break
         }
     }
     private func alert(_ message:String){
@@ -887,7 +904,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     curFile.file_lat = blipFileRow["latitude"] as? Double
                     curFile.file_lon = blipFileRow["longitude"] as? Double
                     if blipFileRow["imageFile"] != nil {
-                        let tempFile = blipFileRow["imageFile"] as! PFFile
+                        let tempFile = blipFileRow["imageFile"] as! PFFileObject
+                        // NEED LOGIC FOR imageThumbFile
                         curFile.imageFile = tempFile
                         self.blipFiles.append(curFile)
                         curBlip.fileCount += 1
@@ -925,7 +943,6 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
     
     public func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
         if let image = info[UIImagePickerControllerOriginalImage] as? UIImage {
-            //let imageThumb  = self.getAssetThumbnail(asset: asset)
             self.imageView.image = image
             print("image view set")
             self.choosenImage = image
@@ -934,6 +951,7 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
                 print("Photo Library Mode")
                 // Extract Exif Data from Phone
                 let asset = info[UIImagePickerControllerPHAsset] as! PHAsset
+                //let imageThumb  = self.getAssetThumbnail(asset: asset)
                 let options = PHContentEditingInputRequestOptions()
                 options.isNetworkAccessAllowed = true //download asset metadata from iCloud if needed
                 asset.requestContentEditingInput(with: options) { (contentEditingInput: PHContentEditingInput?, _) -> Void in

@@ -203,19 +203,16 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputPaths = (
-				"${SRCROOT}/Pods/Target Support Files/Pods-Blip dropper/Pods-Blip dropper-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/Bolts/Bolts.framework",
-				"${BUILT_PRODUCTS_DIR}/Parse/Parse.framework",
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Blip dropper/Pods-Blip dropper-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Bolts.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Parse.framework",
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Blip dropper/Pods-Blip dropper-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Blip dropper/Pods-Blip dropper-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Blip dropper/Pods-Blip dropper-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		5649F9BB5DF0DCDB77D2FB3E /* [CP] Check Pods Manifest.lock */ = {

@@ -8,6 +8,12 @@
 
 import UIKit
 import Parse
+
+/* maybe fix that bug where loading images jump around?
+ https://thomashanning.com/the-most-common-mistake-in-using-uitableview/
+ https://developer.apple.com/forums/thread/119005
+ https://jayeshkawli.ghost.io/using-imagedownloader-library-with-reusable-cells/
+*/
 // convert lat lon to coordinates/placemarks
 // convert lat lon to strings
 // present time as a string with or without a TZ override
@@ -52,8 +58,10 @@ public struct blipData {
     var create_tz_secs = 0
     var blip_status = ""
     var isPublic = true
-    var imageFile: PFFile?
+    var imageFile: PFFileObject?
     var imageUIImage: UIImage?
+    var imageThumbFile: PFFileObject?
+    var imageThumbUIImage: UIImage?
     var fileCount = 0
     var arrayPosition = Int()
     var mode = ""
@@ -73,8 +81,10 @@ public struct blipFile {
     var create_lat: Double?
     var create_lon: Double?
     var create_addr = ""
-    var imageFile: PFFile?
+    var imageFile: PFFileObject?
     var imageUIImage: UIImage?
+    var imageThumbFile: PFFileObject?
+    var imageThumbUIImage: UIImage?
     var fileURL = ""
 }
 public struct blipLocation {
@@ -153,6 +163,71 @@ public struct hereItem {
 
 // ----------------------------------------
 // Global Functions
+func getBlipImage (blip: blipData) {
+    blip.imageFile?.getDataInBackground { (data, error) in
+        if let imageData = data {
+            if let imageToDisplay = UIImage(data: imageData) {
+                saveParseThumb(objectId: blip.blip_id, image: returnThumbnail(bigImage: imageToDisplay))
+            }
+        }
+    }
+}
+func saveParseThumb (objectId: String, image: UIImage) {
+    var thumbImageFile: PFFileObject?
+    // Load blip to update
+    let query = PFQuery(className: "BlipPost")
+    query.getObjectInBackground(withId: objectId) { (blip, error) in
+        if blip != nil && error == nil {
+            // Encode the image as JPG
+            if let imageData = UIImageJPEGRepresentation(image, 0.1) {
+                print("start image encode to PFFile \(objectId)")
+                if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
+                    thumbImageFile = blipFile
+                }
+                print("done image encode to PFFile")
+            }
+            blip!["imageThumbFile"] = thumbImageFile
+            blip!.saveInBackground()
+        } else {
+            print(error?.localizedDescription ?? "Maybe no blip \(objectId)")
+        }
+    }
+}
+func rotateImage(image: UIImage) -> UIImage {
+    if (image.imageOrientation == UIImage.Orientation.up) {
+        return image
+    }
+    UIGraphicsBeginImageContext(image.size)
+    image.draw(in: CGRect(origin: .zero, size: image.size))
+    let copy = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+
+    return copy!
+}
+
+func returnThumbnail(bigImage: UIImage) -> UIImage {
+    var thumbnail = UIImage()
+
+    if let imageData = UIImagePNGRepresentation(rotateImage(image: bigImage)){
+        let options = [
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: 100] as CFDictionary // Specify your desired size at kCGImageSourceThumbnailMaxPixelSize. 100 seems standard
+        
+        imageData.withUnsafeBytes { ptr in
+            guard let bytes = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return
+            }
+            if let cfData = CFDataCreate(kCFAllocatorDefault, bytes, imageData.count){
+                let source = CGImageSourceCreateWithData(cfData, nil)!
+                let imageReference = CGImageSourceCreateThumbnailAtIndex(source, 0, options)!
+                thumbnail = UIImage(cgImage: imageReference) // You get your thumbail here
+            }
+        }
+    }
+    return thumbnail
+}
+
 func time2String (time: Date) -> String {
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "E, d MMM yyyy h:mm a"
@@ -566,5 +641,16 @@ BRIAN QUESTIONS
  set = true
  return annotationView
  }
+https://stackoverflow.com/questions/40675640/creating-a-thumbnail-from-uiimage-using-cgimagesourcecreatethumbnailatindex
+ 
+ let imageData = UIImagePNGRepresentation(image)!
+ let options = [
+ kCGImageSourceCreateThumbnailWithTransform: true,
+ kCGImageSourceCreateThumbnailFromImageAlways: true,
+ kCGImageSourceThumbnailMaxPixelSize: 300] as CFDictionary
+ let source = CGImageSourceCreateWithData(imageData, nil)!
+ let imageReference = CGImageSourceCreateThumbnailAtIndex(source, 0, options)!
+ let thumbnail = UIImage(cgImage: imageReference)
+
  */
 
