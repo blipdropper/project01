@@ -7,8 +7,10 @@
 //
 
 import UIKit
+import Parse
 
 class BlipFeedTVCell: UITableViewCell {
+    var prevImage: PFFileObject?
 
     @IBOutlet weak var blipLabel: UILabel!
     @IBOutlet weak var blipImage: UIImageView!
@@ -25,6 +27,12 @@ class BlipFeedTVCell: UITableViewCell {
         super.setSelected(selected, animated: animated)
 
         // Configure the view for the selected state
+    }
+    
+    func applyThumb (thumbFile: PFFileObject?) {
+        print(thumbFile ?? "nil file?")
+        print(prevImage ?? "nil prev File")
+        prevImage = thumbFile
     }
 
 }

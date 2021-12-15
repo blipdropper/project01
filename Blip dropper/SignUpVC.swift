@@ -26,6 +26,7 @@ class SignUpVC: UIViewController {
     @IBOutlet weak var logOnSignUpButton: UIButton!
     @IBOutlet weak var switchModeButton: UIButton!
     @IBOutlet weak var msgSignUpLogOn: UILabel!
+    @IBOutlet weak var iconImage: UIImageView!
     
     @IBAction func resetPassword(_ sender: Any) {
         print("You reset now? from \(userName.text ?? "")")
@@ -135,6 +136,7 @@ class SignUpVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         print("ViewDidLoad.SignUpVC")
+        iconImage.image = UIImage(named: "bLightGrey")
     }
     
     override func viewDidAppear(_ animated: Bool) {

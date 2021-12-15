@@ -919,7 +919,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         if segue.identifier == "showPlaceTimePicker" {
             let vc = segue.destination as! BlipDataPickerVC
             print(blipFiles.count)
-            print(blipFiles[0].file_addr)
+            print(blipFiles[0].file_addr) // bug causes a crash!
             vc.blipFiles = blipFiles
         } else if segue.identifier == "showPlacePicker" {
             let vc = segue.destination as! BlipPlacePickerVC

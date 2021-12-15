@@ -49,6 +49,10 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     }
     internal func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "blipCell", for: indexPath) as! BlipFeedTVCell
+        // Set the cell to some defaults
+        cell.blipImage.image = nil
+        cell.applyThumb(thumbFile: loadedBlips[indexPath.row].imageFile)
+       // run a function in the cell class to set up the cell passing the blip
 
         // Reset Index 0 table row for new blips with no image
         if loadedBlips[indexPath.row].imageFile == nil {
@@ -68,7 +72,17 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
             cell.blipImage.layer.borderColor = UIColor.gray.cgColor
             cell.blipImage.layer.borderWidth = 3.0
         } else {
+            print("UI image for cell was NULL")
             loadedBlips[indexPath.row].imageFile?.getDataInBackground { (data, error) in
+                if let isCached = loadedBlips[indexPath.row].imageFile?.isDataAvailable {
+                    if isCached {
+                        print("already cached")
+                    } else {
+                        print("not already cached")
+                    }
+                } else {
+                    print("imageFile was nil")
+                }
                 if let imageData = data {
                     if let imageToDisplay = UIImage(data: imageData) {
                         cell.blipImage.image = imageToDisplay
@@ -183,6 +197,7 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                 }
             }
         })
+        print("ViewDidLoad all done")
     }
     
     override func viewDidAppear(_ animated: Bool) {
