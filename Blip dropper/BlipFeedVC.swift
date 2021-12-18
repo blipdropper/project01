@@ -52,8 +52,9 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
         // Set the cell to some defaults
         cell.blipImage.image = nil
         cell.applyThumb(thumbFile: loadedBlips[indexPath.row].imageFile)
+        cell.setBlipCell(blip: loadedBlips[indexPath.row])
        // run a function in the cell class to set up the cell passing the blip
-
+/*
         // Reset Index 0 table row for new blips with no image
         if loadedBlips[indexPath.row].imageFile == nil {
             print("image NIL")
@@ -101,6 +102,7 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
         cell.blipTS.text = loadedBlips[indexPath.row].blip_dt_txt
         cell.blipLabel.text = loadedBlips[indexPath.row].blip_note
         cell.blipLatLon.text = loadedBlips[indexPath.row].blip_addr
+*/
         cell.blipUsername.text = loadedBlips[indexPath.row].blip_id
         return cell
     }
