@@ -903,10 +903,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     if blipFileRow["latitude"] == nil { print("blipFileRow latitude is nil")}
                     curFile.file_lat = blipFileRow["latitude"] as? Double
                     curFile.file_lon = blipFileRow["longitude"] as? Double
+                    // You should skip everything if the image file is null, not just skip the append part
                     if blipFileRow["imageFile"] != nil {
                         let tempFile = blipFileRow["imageFile"] as! PFFileObject
                         // NEED LOGIC FOR imageThumbFile
                         curFile.imageFile = tempFile
+                        if blipFileRow["imageThumbFile"] == nil {
+                            print ("Missing thumb on \(curFile.file_id)")
+                        }
                         self.blipFiles.append(curFile)
                         curBlip.fileCount += 1
                     }

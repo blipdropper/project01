@@ -163,6 +163,36 @@ public struct hereItem {
 
 // ----------------------------------------
 // Global Functions
+func getBlipFileImage (blipFile: blipFile) {
+    blipFile.imageFile?.getDataInBackground { (data, error) in
+        if let imageData = data {
+            if let imageToDisplay = UIImage(data: imageData) {
+                saveBlipFileThumb(objectId: blipFile.file_id, image: returnThumbnail(bigImage: imageToDisplay))
+            }
+        }
+    }
+}
+func saveBlipFileThumb (objectId: String, image: UIImage) {
+    var thumbImageFile: PFFileObject?
+    // Load blip to update
+    let query = PFQuery(className: "BlipFile")
+    query.getObjectInBackground(withId: objectId) { (blipFile, error) in
+        if blipFile != nil && error == nil {
+            // Encode the image as JPG
+            if let imageData = UIImageJPEGRepresentation(image, 0.1) {
+                print("start image encode to PFFile \(objectId)")
+                if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
+                    thumbImageFile = blipFile
+                }
+                print("done image encode to PFFile")
+            }
+            blipFile!["imageThumbFile"] = thumbImageFile
+            blipFile!.saveInBackground()
+        } else {
+            print(error?.localizedDescription ?? "Maybe no blip \(objectId)")
+        }
+    }
+}
 func getBlipImage (blip: blipData) {
     blip.imageFile?.getDataInBackground { (data, error) in
         if let imageData = data {

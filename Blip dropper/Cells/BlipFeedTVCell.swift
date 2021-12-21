@@ -44,11 +44,18 @@ class BlipFeedTVCell: UITableViewCell {
         blipLabel.text = blip.blip_note
         blipLatLon.text = blip.blip_addr
         blipUsername.text = blip.blip_id
+        if blipLabel.text == "Rome pizza place" {
+            print("found it")
+        }
+        blipImage.layer.cornerRadius = 0.0
+        blipImage.clipsToBounds = false
+        blipImage.layer.borderColor = UIColor.gray.cgColor
+        blipImage.layer.borderWidth = 0.0
 
         // Reset Index 0 table row for new blips with no image
         if blip.imageFile == nil {
             print("image NIL")
-            blipImage.image = nil
+//            blipImage.image = nil
             blipImage.layer.cornerRadius = 0.0
             blipImage.clipsToBounds = false
             blipImage.layer.borderColor = UIColor.gray.cgColor
@@ -63,13 +70,19 @@ class BlipFeedTVCell: UITableViewCell {
             blipImage.layer.borderColor = UIColor.gray.cgColor
             blipImage.layer.borderWidth = 3.0
         } else {
-            print("UI image for cell was NULL")
+            // UI image for cell was NULL... not sure why it ever wouldn't be?
             blip.imageFile?.getDataInBackground { (data, error) in
                 if let isCached = blip.imageFile?.isDataAvailable {
                     if isCached || (self.prevImageFile == blip.imageFile) {
                         if let imageData = data {
                             if let imageToDisplay = UIImage(data: imageData) {
                                 self.blipImage.image = imageToDisplay
+                                self.blipImage.layer.cornerRadius = self.blipImage.frame.size.width / 2
+                                self.blipImage.clipsToBounds = true
+                                self.blipImage.layer.borderColor = UIColor.gray.cgColor
+                                self.blipImage.layer.borderWidth = 3.0
+                                //self.blipImage.layer.cornerRadius = 10.0;
+                                //self.blipImage.borderColor = UIColor( red: 0.5, green: 0.5, blue:0, alpha: 1.0 )
                             }
                         } else {
                             print(error?.localizedDescription ?? "")
