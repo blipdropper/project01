@@ -47,10 +47,10 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
         // Query Parse Server... need to clean up what you need to check for nil on curBlip so you can post changes to Blip
         let query = PFQuery(className: "BlipPost")
-//        query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
-//        query.whereKeyDoesNotExist("imageFile")
+        query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
+        //query.whereKeyDoesNotExist("imageFile")
         query.order(byDescending: "blip_date")
-        query.limit = 10000
+        query.limit = 1000 // Need to change this to smooth updating of infinite value like instagram/facebook
         query.findObjectsInBackground(block: { (objects, error) in
         var strDate = ""
             // Build Data Arrays
@@ -64,7 +64,9 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                     } else {
                         print("Error setting date string")
                     }
+                    curBlip.create_dt = curBlip.blip_dt
                     curBlip.blip_dt_txt = strDate
+                    curBlip.create_dt_txt = curBlip.blip_dt_txt
                     curBlip.blip_addr = post["blip_address"] as! String
                     curBlip.blip_note = post["blip_msg"] as! String
                     curBlip.blip_id = (post.objectId!)
@@ -91,8 +93,8 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                     // Lets do some house keeping here
                     // --------------------------------
                     if curBlip.imageFile == nil {
-                        print ("no image lets check if there are any image files...  \(curBlip.blip_id)- \(curBlip.blip_note)")
-                        // should have a map one... if not use the lat lon to create one... if you have a non map one make that the image
+                        // Every blip should have an image file and definitely have a lat/lon, fix if it doesn't
+                        fixMissingBlipFiles(blip: curBlip)
                     }
                 }
             }

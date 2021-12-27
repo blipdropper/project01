@@ -30,6 +30,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     var snapshotRan = "initialized"
     var newBlipMode = false
     var PhotoMode = false
+    var cameraPhotoSwitch = ""
     var txtIsPlaceHolder = false
     var initialActionComplete = false
     let addrDelim = " "
@@ -203,6 +204,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
 
         // Populate Blip File Struct
         var newBlipFile = blipFile()
+        newBlipFile.file_type = cameraPhotoSwitch
         newBlipFile.imageUIImage = choosenImage
         newBlipFile.file_lat = (self.exif?.gps?.latitude)
         newBlipFile.file_lon = (self.exif?.gps?.longitude)
@@ -452,11 +454,13 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         self.alert("Go to settings and grant permission for photos access")
     }
     private func openPhotoPicker(){
+        cameraPhotoSwitch = "Photo"
         self.imagePicker.sourceType = .photoLibrary
         self.imagePicker.allowsEditing = false
         self.present(self.imagePicker, animated: true, completion: nil)
     }
     private func openCameraPicker(){
+        cameraPhotoSwitch = "Camera"
         self.imagePicker.sourceType = .camera
         self.imagePicker.allowsEditing = false
         self.present(self.imagePicker, animated: true, completion: nil)
@@ -478,7 +482,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         mapSnapshotOptions.region = region
         // Set the size of the image output.
         mapSnapshotOptions.size = imageView.frame.size
-        
         // Show buildings and Points of Interest on the snapshot
         mapSnapshotOptions.showsBuildings = true
         mapSnapshotOptions.showsPointsOfInterest = true
@@ -611,7 +614,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                         self.postLocationFile(mapImage: image)
                     }
                 } else {
-                    // if snapshot didn't finish then run it again abut this time do the post at the end
+                    // if snapshot didn't finish then run it again but this time do the post at the end
                     if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
                         self.setBlipLocationImage(latitude: lat, longitude: lon, mode: "postfile")
                     }
@@ -772,9 +775,9 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     func textViewDidChange(_ ttextView: UITextView) {
         //textView(Sender)
-        if(ttextView == self.textView)
-        {
-            print("textView main was used")
+        if(ttextView == self.textView) {
+            // I think this fires every time you type... commentign out
+            // print("textView main was used")
         } else {
             print("some other text view was altered?")
         }
@@ -900,20 +903,24 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     curFile.blip_id = blipFileRow["blip_id"] as! String
                     curFile.file_dt = blipFileRow["file_dt"] as? Date
                     curFile.file_addr = blipFileRow["file_addr"] as? String ?? ""
-                    if blipFileRow["latitude"] == nil { print("blipFileRow latitude is nil")}
+                    // If a file doesn't have a lat/lon then see if you can pull one from exif?
+                    // if blipFileRow["latitude"] == nil { print("blipFileRow latitude is nil")}
                     curFile.file_lat = blipFileRow["latitude"] as? Double
                     curFile.file_lon = blipFileRow["longitude"] as? Double
+
                     // You should skip everything if the image file is null, not just skip the append part
                     if blipFileRow["imageFile"] != nil {
                         let tempFile = blipFileRow["imageFile"] as! PFFileObject
-                        // NEED LOGIC FOR imageThumbFile
                         curFile.imageFile = tempFile
+                        // All files with an image file should have a thumb to use for the collection View
                         if blipFileRow["imageThumbFile"] == nil {
                             print ("Missing thumb on \(curFile.file_id)")
+                            // Create a thumb so its on the server for next time
+                            getBlipFileImage(file: curFile)
                         }
                         self.blipFiles.append(curFile)
                         curBlip.fileCount += 1
-                    }
+                    } else { print ("how does a file row have no file? for \(curFile.blip_id): file=\(curFile.file_id)")}
                 }
                 self.blipFileCollectionView.reloadData()
             }

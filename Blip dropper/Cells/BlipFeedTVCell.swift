@@ -54,7 +54,7 @@ class BlipFeedTVCell: UITableViewCell {
 
         // Reset Index 0 table row for new blips with no image
         if blip.imageFile == nil {
-            print("image NIL")
+            //print("image NIL")
 //            blipImage.image = nil
             blipImage.layer.cornerRadius = 0.0
             blipImage.clipsToBounds = false

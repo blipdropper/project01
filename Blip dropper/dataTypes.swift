@@ -13,7 +13,7 @@ import Parse
  https://thomashanning.com/the-most-common-mistake-in-using-uitableview/
  https://developer.apple.com/forums/thread/119005
  https://jayeshkawli.ghost.io/using-imagedownloader-library-with-reusable-cells/
-*/
+
 // convert lat lon to coordinates/placemarks
 // convert lat lon to strings
 // present time as a string with or without a TZ override
@@ -27,7 +27,7 @@ let yelpApiKey = "Bearer aeLA0m0U9cqOFqgN3CHVOQ_UaJDlB6DCysj23z-woyfmA4Mxf_nMjYO
 let hereAppId = "u0kMh9pqRbVbIRoRUDUR"
 let hereAppCode = "Sm_Nj0Z8V4_Ac-azowbweQ"
 var reloadRequired = false
-
+*/
 
 // ----------------------------------------
 // Global data structures
@@ -82,7 +82,7 @@ public struct blipFile {
     var create_lon: Double?
     var create_addr = ""
     var imageFile: PFFileObject?
-    var imageUIImage: UIImage?
+    var imageUIImage: UIImage? // This should really be a method not holding image file in memory twice
     var imageThumbFile: PFFileObject?
     var imageThumbUIImage: UIImage?
     var fileURL = ""
@@ -161,6 +161,34 @@ public struct hereItem {
     var arrayPosition = Int()
 }
 
+// ----------------------------------------
+// Data structure Conversion
+func returnBlipFileFromDB (dbRow: PFObject)-> blipFile {
+    var blipFile = blipFile()
+    blipFile.file_id = (dbRow.objectId!)
+    blipFile.file_type = dbRow["file_type"] as? String ?? ""
+    blipFile.blip_id = dbRow["blip_id"] as! String
+    blipFile.file_dt = dbRow["file_dt"] as? Date
+    blipFile.file_dt_txt = dbRow["file_dt_txt"] as? String ?? ""
+    blipFile.file_addr = dbRow["file_addr"] as? String ?? ""
+    // If a file doesn't have a lat/lon then see if you can pull one from exif?
+    blipFile.file_lat = dbRow["latitude"] as? Double
+    blipFile.file_lon = dbRow["longitude"] as? Double
+
+    if dbRow["imageFile"] != nil {
+        let tempFile = dbRow["imageFile"] as! PFFileObject
+        blipFile.imageFile = tempFile
+
+        if dbRow["imageThumbFile"] != nil {
+            let tempThumbFile = dbRow["imageThumbFile"] as! PFFileObject
+            blipFile.imageThumbFile = tempThumbFile
+            }
+        }
+
+    return blipFile
+}
+
+/*
 // ----------------------------------------
 // Global Functions
 func getBlipFileImage (blipFile: blipFile) {
@@ -507,6 +535,8 @@ https://places.cit.api.here.com/places/v1/autosuggest
 &app_id=u0kMh9pqRbVbIRoRUDUR
 &app_code=Sm_Nj0Z8V4_Ac-azowbweQ
 """
+*/
+
 /* MEMORY QUEUES
  1.0 If you can't Log On then
  2.0 Read Available Blips
