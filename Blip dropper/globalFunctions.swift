@@ -31,7 +31,7 @@ let hereAppCode = "Sm_Nj0Z8V4_Ac-azowbweQ"
 var reloadRequired = false
 
 // ----------------------------------------
-// Global Functions
+// Global Functions For App
 func fixMissingBlipFiles (blip: blipData) {
     // Load blip to update
     let query = PFQuery(className: "BlipFile")
@@ -135,40 +135,6 @@ func postBlipLocationFile(mapImage: UIImage, blip: blipData) {
         })
     }
 }
-func updateBlipFileCount (blip_id: String, newFileCount: Double?) {
-// if you didn't send an argument then go to the db to figure it out and then update
-    let query = PFQuery(className: "BlipPost")
-    query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
-    query.getObjectInBackground(withId: blip_id) { (blip, error) in
-        if blip != nil && error == nil {
-            if curBlip.imageFile != nil {
-                blip!["imageFile"] = curBlip.imageFile
-            }
-            if curBlip.imageThumbFile != nil {
-                blip!["imageThumbFile"] = curBlip.imageThumbFile
-            }
-            blip!["blip_msg"] = curBlip.blip_note
-            blip!["blip_date"] = curBlip.blip_dt
-            // HOW ARE YOU GOING TO GET THE TZ SECONDS FROM EXIF?  HOW IS THIS USED
-            //blip!["TZOffset_seconds"] = curBlip.blip_tz_secs
-            blip!["blip_address"] = curBlip.blip_addr
-            blip!["latitude"] = curBlip.blip_lat
-            blip!["longitude"] = curBlip.blip_lon
-            blip!["yelp_id"] = curBlip.blip_yelp_id
-            blip!["here_id"] = curBlip.blip_here_id
-            blip!["place_name"] = curBlip.place_name
-            if curBlip.place_lat != nil {
-                blip!["place_lat"] = curBlip.place_lat }
-            if curBlip.place_lon != nil {
-                blip!["place_lon"] = curBlip.place_lon }
-            blip!["place_addr"] = curBlip.place_addr
-            blip!["place_url"] = curBlip.place_url
-            blip!.saveInBackground()
-        } else {
-            print(error?.localizedDescription ?? "")
-        }
-    }
-}
 func makeBlipFileBlipImage (newBlipIcon: blipFile) {
     print("make object \(newBlipIcon.file_id) the representative for \(newBlipIcon.blip_id)")
     // set the file and the thumb to the blip's main and update it in the loaded blips array too
@@ -253,18 +219,37 @@ func saveParseThumb (objectId: String, image: UIImage) {
         }
     }
 }
-func rotateImage(image: UIImage) -> UIImage {
-    if (image.imageOrientation == UIImage.Orientation.up) {
-        return image
-    }
-    UIGraphicsBeginImageContext(image.size)
-    image.draw(in: CGRect(origin: .zero, size: image.size))
-    let copy = UIGraphicsGetImageFromCurrentImageContext()
-    UIGraphicsEndImageContext()
+func getBlipAddrFromLatLon (blip: blipData) {
+    var center : CLLocationCoordinate2D = CLLocationCoordinate2D()
+    var updatedBlip = blip
+    if let lat = blip.blip_lat, let lon = blip.blip_lon {
+        let ceo: CLGeocoder = CLGeocoder()
+        center.latitude = lat
+        center.longitude = lon
 
-    return copy!
+        let loc: CLLocation = CLLocation(latitude:center.latitude, longitude: center.longitude)
+        ceo.reverseGeocodeLocation(loc, completionHandler: {(placemarks, error) in
+            if (error != nil) {
+                print("reverse geodcode fail: \(error!.localizedDescription) lat:\(lat)/lon:\(lon) blipAddr:\(blip.blip_addr)")
+            }
+            if let pm = placemarks?[0] {
+                updatedBlip.blip_location = returnLocationFromPlaceMark(pm: pm)
+                /*
+                print("street #    :", pm.subThoroughfare ?? "")
+                print("street      :", pm.thoroughfare ?? "")
+                print("neighborhood:", pm.subLocality ?? "")
+                print("city        :", pm.locality ?? "")
+                print("state       :", pm.administrativeArea ?? "")
+                print("county      :", pm.subAdministrativeArea ?? "")
+                print("zip code    :", pm.postalCode ?? "")
+                print("country     :", pm.country ?? "")
+                */
+                // what is this areas of interest array! developer.apple.com/documentation/corelocation/clplacemark
+                saveBlipDataToDb(blip: updatedBlip)
+            }
+        })
+    } else {print("Error unwrapping lat/lon... Either Lat or Lon is missing on Blip, or no address deets?")}
 }
-
 func returnThumbnail(bigImage: UIImage) -> UIImage {
     var thumbnail = UIImage()
 
@@ -355,8 +340,8 @@ func runDelayTimer() {
 
 // COMPARE
 func compareYelpHere (yelp: yelpBusinessSearch, here: hereItem) -> (nameMatch: Bool, addrMatch: Bool) {
-    var nameMatch = false
-    var addrMatch = false
+    let nameMatch = false
+    let addrMatch = false
     return (nameMatch, addrMatch)
 }
 
@@ -538,3 +523,26 @@ https://places.cit.api.here.com/places/v1/autosuggest
 &app_code=Sm_Nj0Z8V4_Ac-azowbweQ
 """
 
+// ----------------------------------------
+// Universal Swift Functions
+func returnStringDate (date: Date, dateFormat: String) -> String {
+    // www.datetimeformatter.com/how-to-format-date-time-in-swift/
+    let dateFormatter = DateFormatter()
+    // "E, d MMM yyyy h:mm a" Sun, 26 Dec 2021 12:10 pm
+    dateFormatter.dateFormat = "MMM d yyyy h:mma"
+    var strDate = dateFormatter.string(from: date)
+    strDate = strDate.replacingOccurrences(of: "AM", with: "am")
+    strDate = strDate.replacingOccurrences(of: "PM", with: "pm")
+ return strDate
+}
+func rotateImage(image: UIImage) -> UIImage {
+    if (image.imageOrientation == UIImage.Orientation.up) {
+        return image
+    }
+    UIGraphicsBeginImageContext(image.size)
+    image.draw(in: CGRect(origin: .zero, size: image.size))
+    let copy = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+
+    return copy!
+}

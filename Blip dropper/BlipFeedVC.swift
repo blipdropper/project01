@@ -14,6 +14,9 @@ import Parse
 class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     // ----------------------------------------
     // IBOUTLETS, ACTIONS, and variables
+    var foundCntr = 0
+    var missingCntr = 0
+    
     var PhotoModeButton = false
 
     @IBOutlet weak var FeedTableView: UITableView!
@@ -52,22 +55,29 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
         query.order(byDescending: "blip_date")
         query.limit = 1000 // Need to change this to smooth updating of infinite value like instagram/facebook
         query.findObjectsInBackground(block: { (objects, error) in
-        var strDate = ""
             // Build Data Arrays
             if let posts = objects {
                 for post in posts {
-                    if let blipdate = post["blip_date"] {
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "E, d MMM yyyy h:mm a"
-                        strDate = dateFormatter.string(from: blipdate as! Date)
-                        curBlip.blip_dt = blipdate as? Date
+                    curBlip = returnBlipPostFromDB(dbRow: post)
+                    /*
+                    if let blipdate = post["blip_date"] as? Date {
+                        curBlip.blip_dt_txt = returnStringDate(date: blipdate, dateFormat: "")
+                        curBlip.blip_dt = blipdate
                     } else {
                         print("Error setting date string")
                     }
                     curBlip.create_dt = curBlip.blip_dt
-                    curBlip.blip_dt_txt = strDate
                     curBlip.create_dt_txt = curBlip.blip_dt_txt
                     curBlip.blip_addr = post["blip_address"] as! String
+                    curBlip.blip_location.subThoroughfare = post["subThoroughfare"] as! String
+                    curBlip.blip_location.thoroughfare = post["thoroughfare"] as! String
+                    curBlip.blip_location.subLocality = post["subLocality"] as! String
+                    curBlip.blip_location.locality = post["locality"] as! String
+                    curBlip.blip_location.subAdministrativeArea = post["subAdministrativeArea"] as! String
+                    curBlip.blip_location.administrativeArea = post["administrativeArea"] as! String
+                    curBlip.blip_location.postalCode = post["postalCode"] as! String
+                    curBlip.blip_location.country = post["country"] as! String
+
                     curBlip.blip_note = post["blip_msg"] as! String
                     curBlip.blip_id = (post.objectId!)
                     curBlip.imageFile = post["imageFile"] as? PFFileObject
@@ -86,6 +96,8 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                         curBlip.place_addr = post["place_addr"] as! String }
                     if post["place_url"] != nil {
                         curBlip.place_url = post["place_url"] as! String }
+                    */
+                    // need to add the new blip post to rules and only run
 
                     loadedBlips.append(curBlip)
 
@@ -103,6 +115,7 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                     self.FeedTableView.reloadData()
                 }
             }
+            print ("FOUND=\(self.foundCntr) MISSING=\(self.missingCntr)")
         })
         print("ViewDidLoad all done")
     }

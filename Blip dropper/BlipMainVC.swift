@@ -102,6 +102,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 // HOW ARE YOU GOING TO GET THE TZ SECONDS FROM EXIF?  HOW IS THIS USED
                 //blip!["TZOffset_seconds"] = curBlip.blip_tz_secs
                 blip!["blip_address"] = curBlip.blip_addr
+                blip!["subThoroughfare"] = curBlip.blip_location.subThoroughfare
+                blip!["thoroughfare"] = curBlip.blip_location.thoroughfare
+                blip!["subLocality"] = curBlip.blip_location.subLocality
+                blip!["locality"] = curBlip.blip_location.locality
+                blip!["subAdministrativeArea"] = curBlip.blip_location.subAdministrativeArea
+                blip!["administrativeArea"] = curBlip.blip_location.administrativeArea
+                blip!["postalCode"] = curBlip.blip_location.postalCode
+                blip!["country"] = curBlip.blip_location.country
                 blip!["latitude"] = curBlip.blip_lat
                 blip!["longitude"] = curBlip.blip_lon
                 blip!["yelp_id"] = curBlip.blip_yelp_id
@@ -128,6 +136,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         loadedBlips[curBlip.arrayPosition].blip_lat = curBlip.blip_lat
         loadedBlips[curBlip.arrayPosition].blip_lon = curBlip.blip_lon
         loadedBlips[curBlip.arrayPosition].blip_addr = curBlip.blip_addr
+        loadedBlips[curBlip.arrayPosition].blip_location = curBlip.blip_location
         loadedBlips[curBlip.arrayPosition].blip_yelp_id = curBlip.blip_yelp_id
         loadedBlips[curBlip.arrayPosition].blip_here_id = curBlip.blip_here_id
         loadedBlips[curBlip.arrayPosition].place_name = curBlip.place_name
@@ -250,31 +259,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     print(error!)
                 } else {
                     if let placemark = placemarks?[0] {
-                        if placemark.subThoroughfare != nil {
-                            newBlipFile.file_addr += placemark.subThoroughfare! + " "
-                            self.location.subThoroughfare = placemark.subThoroughfare!
-                        }
-                        if placemark.thoroughfare != nil {
-                            newBlipFile.file_addr += placemark.thoroughfare! + self.addrDelim
-                            self.location.thoroughfare = placemark.thoroughfare!
-                        }
-                        if placemark.subLocality != nil {
-                            newBlipFile.file_addr += placemark.subLocality! + self.addrDelim
-                            self.location.subLocality = placemark.subLocality!
-                        }
-                        if placemark.subAdministrativeArea != nil {
-                            newBlipFile.file_addr += placemark.administrativeArea! + self.addrDelim
-                            self.location.subAdministrativeArea = placemark.administrativeArea!
-                        }
-                        if placemark.postalCode != nil {
-                            newBlipFile.file_addr += placemark.postalCode! + self.addrDelim
-                            self.location.postalCode = placemark.postalCode!
-                        }
-                        if placemark.country != nil {
-                            newBlipFile.file_addr += placemark.country! + self.addrDelim
-                            self.location.country = placemark.country!
-                        }
-                        self.location.strAddress = newBlipFile.file_addr
+                        self.location = returnLocationFromPlaceMark(pm: placemark)
+                        newBlipFile.file_addr = self.location.strAddress
                         print(self.location.strAddress)
                         
                         // Save Blip Row WITH Metadata
@@ -297,10 +283,10 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                             curBlip.blip_lat = newBlipFile.file_lat
                             curBlip.blip_lon = newBlipFile.file_lon
                             curBlip.blip_addr = newBlipFile.file_addr
+                            curBlip.blip_location = self.location
                             
                             if exifDateOk {
                                 self.blipDate.setTitle(newBlipFile.file_dt_txt, for: [])
-                                
                                 curBlip.blip_dt = newBlipFile.file_dt
                                 curBlip.blip_dt_txt  = newBlipFile.file_dt_txt
                             }
@@ -530,33 +516,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 print(error!)
             } else {
                 if let placemark = placemarks?[0] {
-                    var address = ""
-                    if placemark.subThoroughfare != nil {
-                        address += placemark.subThoroughfare! + " "
-                        self.location.subThoroughfare = placemark.subThoroughfare!
-                    }
-                    if placemark.thoroughfare != nil {
-                        address += placemark.thoroughfare! + self.addrDelim
-                        self.location.thoroughfare = placemark.thoroughfare!
-                    }
-                    if placemark.subLocality != nil {
-                        address += placemark.subLocality! + self.addrDelim
-                        self.location.subLocality = placemark.subLocality!
-                    }
-                    if placemark.subAdministrativeArea != nil {
-                        address += placemark.subAdministrativeArea! + self.addrDelim
-                        self.location.subAdministrativeArea = placemark.subAdministrativeArea!
-                    }
-                    if placemark.postalCode != nil {
-                        address += placemark.postalCode! + self.addrDelim
-                        self.location.postalCode = placemark.postalCode!
-                    }
-                    if placemark.country != nil {
-                        address += placemark.country! + self.addrDelim
-                        self.location.country = placemark.country!
-                    }
-                    self.location.strAddress = address
-
+                    self.location = returnLocationFromPlaceMark(pm: placemark)
                     print(self.location.strAddress)
 
                     if !self.locationSet {
@@ -582,6 +542,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         curBlip.blip_dt_txt = time2String(time: curBlip.blip_dt!)
         curBlip.blip_lat = location.lat
         curBlip.blip_lon = location.lon
+        curBlip.blip_location = location
         curBlip.blip_addr = location.strAddress
         curBlip.blip_tz_secs = secondsFromGMT
         curBlip.create_dt = curBlip.blip_dt
@@ -598,6 +559,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         post["blip_msg"] = curBlip.blip_note
         post["blip_date"] = curBlip.blip_dt
         post["TZOffset_seconds"] = curBlip.blip_tz_secs
+        post["subThoroughfare"] = curBlip.blip_location.subThoroughfare
+        post["thoroughfare"] = curBlip.blip_location.thoroughfare
+        post["subLocality"] = curBlip.blip_location.subLocality
+        post["locality"] = curBlip.blip_location.locality
+        post["subAdministrativeArea"] = curBlip.blip_location.subAdministrativeArea
+        post["administrativeArea"] = curBlip.blip_location.administrativeArea
+        post["postalCode"] = curBlip.blip_location.postalCode
+        post["country"] = curBlip.blip_location.country
         post["blip_address"] = curBlip.blip_addr
         post["latitude"] = curBlip.blip_lat
         post["longitude"] = curBlip.blip_lon

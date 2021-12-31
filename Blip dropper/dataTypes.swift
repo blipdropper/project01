@@ -39,6 +39,7 @@ public struct blipData {
     var blip_dt_txt = ""
     var blip_lat: Double?
     var blip_lon: Double?
+    var blip_location = blipLocation()
     var blip_addr = ""
     var blip_tz_secs = 0
     var blip_yelp_id = ""
@@ -74,6 +75,7 @@ public struct blipFile {
     var file_dt: Date?
     var file_dt_txt = ""
     var file_addr = ""
+    var file_location = blipLocation()
     var file_lat: Double?
     var file_lon: Double?
     var create_dt: Date?
@@ -94,17 +96,18 @@ public struct blipLocation {
     var strLatitude = ""
     var strLongitude = ""
     var strLatLon = ""
-    var subThoroughfare = ""
     var thoroughfare = ""
+    var subThoroughfare = ""
+    var locality = ""
     var subLocality = ""
+    var administrativeArea = ""
     var subAdministrativeArea = ""
     var postalCode = ""
     var country = ""
     var strCourse = ""
     var strSpeed = ""
     var strAltitude = ""
-    var strAddress = ""
-    // create display permeations for blipMain, blip feed cell, map, etc
+    var strAddress = "" // create display permeations for blipMain, blip feed cell, map, etc
 }
 public struct blipPlace {
     var name = ""
@@ -163,6 +166,48 @@ public struct hereItem {
 
 // ----------------------------------------
 // Data structure Conversion
+func returnBlipPostFromDB (dbRow: PFObject)-> blipData {
+    var blipData = blipData()
+    blipData.blip_id = (dbRow.objectId!)
+
+    if let blipdate = dbRow["blip_date"] as? Date {
+        blipData.blip_dt_txt = returnStringDate(date: blipdate, dateFormat: "")
+        blipData.blip_dt = blipdate
+    } else {
+        print("Error setting date string")
+    }
+    blipData.create_dt = blipData.blip_dt
+    blipData.create_dt_txt = blipData.blip_dt_txt
+    blipData.blip_addr = dbRow["blip_address"] as? String ?? ""
+    blipData.blip_location.subThoroughfare = dbRow["subThoroughfare"] as? String ?? ""
+    blipData.blip_location.thoroughfare = dbRow["thoroughfare"] as? String ?? ""
+    blipData.blip_location.subLocality = dbRow["subLocality"] as? String ?? ""
+    blipData.blip_location.locality = dbRow["locality"] as? String ?? ""
+    blipData.blip_location.subAdministrativeArea = dbRow["subAdministrativeArea"] as? String ?? ""
+    blipData.blip_location.administrativeArea = dbRow["administrativeArea"] as? String ?? ""
+    blipData.blip_location.postalCode = dbRow["postalCode"] as? String ?? ""
+    blipData.blip_location.country = dbRow["country"] as? String ?? ""
+
+    blipData.blip_note = dbRow["blip_msg"] as? String ?? ""
+    blipData.imageFile = dbRow["imageFile"] as? PFFileObject
+    blipData.imageThumbFile = dbRow["imageThumbFile"] as? PFFileObject
+    blipData.blip_lat = dbRow["latitude"] as? Double
+    blipData.blip_lon = dbRow["longitude"] as? Double
+    if dbRow["yelp_id"] != nil {
+        blipData.blip_yelp_id =  dbRow["yelp_id"] as! String }
+    if dbRow["here_id"] != nil {
+        blipData.blip_here_id =  dbRow["here_id"] as! String }
+    if dbRow["place_name"] != nil {
+        blipData.place_name = dbRow["place_name"] as! String }
+    if dbRow["place_lat"] != nil {
+        blipData.place_lat  = dbRow["place_lat"] as? Double }
+    if dbRow["place_addr"] != nil {
+        blipData.place_addr = dbRow["place_addr"] as! String }
+    if dbRow["place_url"] != nil {
+        blipData.place_url = dbRow["place_url"] as! String }
+
+    return blipData
+}
 func returnBlipFileFromDB (dbRow: PFObject)-> blipFile {
     var blipFile = blipFile()
     blipFile.file_id = (dbRow.objectId!)
@@ -187,355 +232,95 @@ func returnBlipFileFromDB (dbRow: PFObject)-> blipFile {
 
     return blipFile
 }
-
-/*
-// ----------------------------------------
-// Global Functions
-func getBlipFileImage (blipFile: blipFile) {
-    blipFile.imageFile?.getDataInBackground { (data, error) in
-        if let imageData = data {
-            if let imageToDisplay = UIImage(data: imageData) {
-                saveBlipFileThumb(objectId: blipFile.file_id, image: returnThumbnail(bigImage: imageToDisplay))
-            }
-        }
-    }
-}
-func saveBlipFileThumb (objectId: String, image: UIImage) {
-    var thumbImageFile: PFFileObject?
-    // Load blip to update
-    let query = PFQuery(className: "BlipFile")
-    query.getObjectInBackground(withId: objectId) { (blipFile, error) in
-        if blipFile != nil && error == nil {
-            // Encode the image as JPG
-            if let imageData = UIImageJPEGRepresentation(image, 0.1) {
-                print("start image encode to PFFile \(objectId)")
-                if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
-                    thumbImageFile = blipFile
-                }
-                print("done image encode to PFFile")
-            }
-            blipFile!["imageThumbFile"] = thumbImageFile
-            blipFile!.saveInBackground()
-        } else {
-            print(error?.localizedDescription ?? "Maybe no blip \(objectId)")
-        }
-    }
-}
-func getBlipImage (blip: blipData) {
-    blip.imageFile?.getDataInBackground { (data, error) in
-        if let imageData = data {
-            if let imageToDisplay = UIImage(data: imageData) {
-                saveParseThumb(objectId: blip.blip_id, image: returnThumbnail(bigImage: imageToDisplay))
-            }
-        }
-    }
-}
-func saveParseThumb (objectId: String, image: UIImage) {
-    var thumbImageFile: PFFileObject?
-    // Load blip to update
+func saveBlipDataToDb (blip: blipData) {
     let query = PFQuery(className: "BlipPost")
-    query.getObjectInBackground(withId: objectId) { (blip, error) in
-        if blip != nil && error == nil {
-            // Encode the image as JPG
-            if let imageData = UIImageJPEGRepresentation(image, 0.1) {
-                print("start image encode to PFFile \(objectId)")
-                if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
-                    thumbImageFile = blipFile
-                }
-                print("done image encode to PFFile")
+    query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
+    query.getObjectInBackground(withId: blip.blip_id) { (getBlip, error) in
+        if let dbBlip = getBlip {
+            /* For now just add the address stuff
+            if blip.imageFile != nil {
+                dbBlip["imageFile"] = blip.imageFile
             }
-            blip!["imageThumbFile"] = thumbImageFile
-            blip!.saveInBackground()
+            if blip.imageThumbFile != nil {
+                dbBlip["imageThumbFile"] = blip.imageThumbFile
+            }
+            dbBlip["blip_msg"] = blip.blip_note
+            dbBlip["blip_date"] = blip.blip_dt
+            // HOW ARE YOU GOING TO GET THE TZ SECONDS FROM EXIF?  HOW IS THIS USED
+            //dbBlip["TZOffset_seconds"] = blip.blip_tz_secs
+            dbBlip["blip_address"] = blip.blip_addr
+            dbBlip["latitude"] = blip.blip_lat
+            dbBlip["longitude"] = blip.blip_lon
+            dbBlip["yelp_id"] = blip.blip_yelp_id
+            dbBlip["here_id"] = blip.blip_here_id
+            dbBlip["place_name"] = blip.place_name
+            if blip.place_lat != nil {
+                dbBlip["place_lat"] = blip.place_lat }
+            if blip.place_lon != nil {
+                dbBlip["place_lon"] = blip.place_lon }
+            dbBlip["place_addr"] = blip.place_addr
+            dbBlip["place_url"] = blip.place_url
+            */
+            dbBlip["subThoroughfare"] = blip.blip_location.subThoroughfare
+            dbBlip["thoroughfare"] = blip.blip_location.thoroughfare
+            dbBlip["subLocality"] = blip.blip_location.subLocality
+            dbBlip["locality"] = blip.blip_location.locality
+            dbBlip["subAdministrativeArea"] = blip.blip_location.subAdministrativeArea
+            dbBlip["administrativeArea"] = blip.blip_location.administrativeArea
+            dbBlip["postalCode"] = blip.blip_location.postalCode
+            dbBlip["country"] = blip.blip_location.country
+
+            dbBlip.saveInBackground()
+            
+            print("SAVED: \(blip.blip_location.strAddress)")
         } else {
-            print(error?.localizedDescription ?? "Maybe no blip \(objectId)")
+            print(error?.localizedDescription ?? "")
         }
     }
 }
-func rotateImage(image: UIImage) -> UIImage {
-    if (image.imageOrientation == UIImage.Orientation.up) {
-        return image
-    }
-    UIGraphicsBeginImageContext(image.size)
-    image.draw(in: CGRect(origin: .zero, size: image.size))
-    let copy = UIGraphicsGetImageFromCurrentImageContext()
-    UIGraphicsEndImageContext()
-
-    return copy!
-}
-
-func returnThumbnail(bigImage: UIImage) -> UIImage {
-    var thumbnail = UIImage()
-
-    if let imageData = UIImagePNGRepresentation(rotateImage(image: bigImage)){
-        let options = [
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceThumbnailMaxPixelSize: 100] as CFDictionary // Specify your desired size at kCGImageSourceThumbnailMaxPixelSize. 100 seems standard
-        
-        imageData.withUnsafeBytes { ptr in
-            guard let bytes = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
-                return
-            }
-            if let cfData = CFDataCreate(kCFAllocatorDefault, bytes, imageData.count){
-                let source = CGImageSourceCreateWithData(cfData, nil)!
-                let imageReference = CGImageSourceCreateThumbnailAtIndex(source, 0, options)!
-                thumbnail = UIImage(cgImage: imageReference) // You get your thumbail here
-            }
-        }
-    }
-    return thumbnail
-}
-
-func time2String (time: Date) -> String {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "E, d MMM yyyy h:mm a"
-    let strDate = dateFormatter.string(from: time)
-    return strDate
-}
-func substr (stringValue: String, forInt: Int) -> String {
-    let returnString = stringValue[..<stringValue.index(stringValue.startIndex, offsetBy: forInt)]
-    return String(returnString)
-}
-func printLog (stringValue: String) {
-    let now = time2String(time: Date())
-    print("\(now): \(stringValue)")
-}
-func placeMark2Addr1 (placemark: CLPlacemark) -> String {
+func returnLocationFromPlaceMark (pm: CLPlacemark)-> blipLocation {
+    var pmLocation = blipLocation()
     let addrDelim = " "
-    var address1 = ""
+    pmLocation.subThoroughfare = pm.subThoroughfare ?? ""
+    pmLocation.thoroughfare = pm.thoroughfare ?? ""
+    pmLocation.subLocality = pm.subLocality ?? ""
+    pmLocation.locality = pm.locality ?? ""
+    pmLocation.subAdministrativeArea = pm.subAdministrativeArea ?? ""
+    pmLocation.administrativeArea = pm.administrativeArea ?? ""
+    pmLocation.postalCode = pm.postalCode ?? ""
+    pmLocation.country = pm.country ?? ""
+    // pmLocation.strAltitude = pm.location?.altitude ... needs to be text
     
-    if placemark.subThoroughfare != nil {
-        address1 += placemark.subThoroughfare! + " "
-    }
-    if placemark.thoroughfare != nil {
-        address1 += placemark.thoroughfare! + addrDelim
-    }
-    return address1
+    if pmLocation.subThoroughfare != "" {
+        pmLocation.strAddress += pmLocation.subThoroughfare + addrDelim
+    }//Number
+    if pmLocation.thoroughfare != "" {
+        pmLocation.strAddress += pmLocation.thoroughfare + addrDelim
+    }//Street
+    if pmLocation.locality != "" {
+        pmLocation.strAddress += pmLocation.locality + addrDelim
+    }//City
+    //if pmLocation.subLocality != "" {
+    //    pmLocation.strAddress += pmLocation.subLocality + addrDelim
+    //}
+    //Neighborhood
+    //if pmLocation.subAdministrativeArea != "" {
+    //    pmLocation.strAddress += pmLocation.subAdministrativeArea + addrDelim
+    //}
+    //County
+    if pmLocation.administrativeArea != "" {
+        pmLocation.strAddress += pmLocation.administrativeArea + addrDelim
+    }//State
+    if pmLocation.postalCode != "" {
+        pmLocation.strAddress += pmLocation.postalCode + addrDelim
+    }// Zip
+    //if pmLocation.country != "" {
+    //    pmLocation.strAddress += pmLocation.country + addrDelim
+    //}
+    // Country
+
+    return pmLocation
 }
-
-func placeMark2Postal (placemark: CLPlacemark) -> String {
-    let addrDelim = " "
-    var address = ""
-    
-    address = placeMark2Addr1(placemark: placemark)
-
-    if placemark.subLocality != nil {
-        address += placemark.subLocality! + addrDelim
-    }
-    if placemark.subAdministrativeArea != nil {
-        address += placemark.administrativeArea! + addrDelim
-    }
-    if placemark.postalCode != nil {
-        address += placemark.postalCode! + addrDelim
-    }
-    if placemark.country != nil {
-        address += placemark.country! + addrDelim
-    }
-
-    return address
-}
-func runDelayTimer() {
-    // turn current date into an integer
-    // calculate end time of period
-    // have emergency escape on loop count or modding the end of the time so that last digit will be 0 1-10 times or something
-    var runCount = 0
-    printLog(stringValue: "Delay Timer function received   ")
-
-    Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { timer in
-        printLog(stringValue: "Timer for runcount \(runCount) fired")
-        runCount += 1
-        if runCount == 20 { //
-            print("This took too long, notify user and die cleanly")
-            timer.invalidate()
-        }
-    }
-}
-
-// COMPARE
-func compareYelpHere (yelp: yelpBusinessSearch, here: hereItem) -> (nameMatch: Bool, addrMatch: Bool) {
-    var nameMatch = false
-    var addrMatch = false
-    return (nameMatch, addrMatch)
-}
-
-// YELP
-func parseYelpBusinessesArray (arrayValue: NSArray) -> [yelpBusinessSearch] {
-    var yelpBusinesses = [yelpBusinessSearch]()
-    for i in 0..<arrayValue.count {
-        var curYelp = yelpBusinessSearch()
-        curYelp.arrayPosition = i
-        if let yelpId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
-            curYelp.yelpId = yelpId     }
-        if let name = (arrayValue[i] as? NSDictionary)?["name"] as? String {
-            curYelp.name = name         }
-        if let imageURL = (arrayValue[i] as? NSDictionary)?["image_url"] as? String {
-            curYelp.imageURL = imageURL }
-        if let url = (arrayValue[i] as? NSDictionary)?["url"] as? String {
-            curYelp.yelpURL = url       }
-        if let latitude = ((arrayValue[i] as? NSDictionary)?["coordinates"] as? NSDictionary)?["latitude"] as? Double {
-            curYelp.lat = latitude      }
-        if let longitude = ((arrayValue[i] as? NSDictionary)?["coordinates"] as? NSDictionary)?["longitude"] as? Double {
-            curYelp.lon = longitude     }
-        if let addr1 = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["address1"] as? String {
-            curYelp.address1 = addr1    }
-        if let city = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["city"] as? String {
-            curYelp.city = city         }
-        if let state = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["state"] as? String {
-            curYelp.state = state       }
-        if let zip = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["zip_code"] as? String {
-            curYelp.zip = zip           }
-        if let country = ((arrayValue[i] as? NSDictionary)?["location"] as? NSDictionary)?["country"] as? String {
-            curYelp.country = country   }
-        if let distance = (arrayValue[i] as? NSDictionary)?["distance"] as? Double {
-            curYelp.distance = distance }
-        if let categories = (arrayValue[i] as? NSDictionary)?["categories"] as? NSArray {
-            var categoryList = [String]()
-            for i in 0..<categories.count {
-                if let category = categories[i] as? NSDictionary {
-                    if let cat = category["title"] as? String {
-                        categoryList.append(cat)
-                    }
-                }
-            }
-            curYelp.categories = categoryList
-        }
-
-        // phone // address match field // categories
-        curYelp.address = "\(curYelp.address1) \(curYelp.city) \(curYelp.state) \(curYelp.zip) \(curYelp.country)"
-        
-        yelpBusinesses.append(curYelp)
-        // print("\(i) Yelp func: \(curYelp.name) \(curYelp.yelpId) \(curYelp.URL) \(curYelp.address) \(curYelp.distance ?? 0)")
-        // load an array of places that will be traversed?
-    }
-    return yelpBusinesses
-}
-
-// HERE
-func printHereItem (arrayValue: NSArray) -> [hereItem]{
-    var hereItems = [hereItem]()
-    for i in 0..<arrayValue.count {
-        var curHere = hereItem()
-        curHere.arrayPosition = i
-        if let hereId = (arrayValue[i] as? NSDictionary)?["id"] as? String {
-            curHere.hereId = hereId
-        }
-        if let latitude = ((arrayValue[i] as? NSDictionary)?["position"] as? NSArray)?[0] as? Double {
-            curHere.lat = latitude
-        }
-        if let longitude = ((arrayValue[i] as? NSDictionary)?["position"] as? NSArray)?[1] as? Double {
-            curHere.lon = longitude
-        }
-        if let title = (arrayValue[i] as? NSDictionary)?["title"] as? String {
-            curHere.title = title
-        }
-        if let icon = (arrayValue[i] as? NSDictionary)?["icon"] as? String {
-            curHere.iconUrl = icon
-        }
-        if let vicinity = (arrayValue[i] as? NSDictionary)?["vicinity"] as? String {
-            curHere.vicinity = vicinity
-            let addressLines = vicinity.components(separatedBy: "<br/>")
-            curHere.address1 = addressLines[0]
-        }
-        if let href = (arrayValue[i] as? NSDictionary)?["href"] as? String {
-            curHere.href = href
-        }
-        if let category = ((arrayValue[i] as? NSDictionary)?["category"] as? NSDictionary)?["id"] as? String {
-            curHere.category = category
-        }
-        if let distance = (arrayValue[i] as? NSDictionary)?["distance"] as? Double {
-            curHere.distance = distance
-        }
-        if let alternativeNames = ((arrayValue[i] as? NSDictionary)?["alternativeNames"] as? NSArray) {
-            var nameList = [String]()
-            for i in 0..<alternativeNames.count {
-                if let altName = alternativeNames[i] as? NSDictionary {
-                    if let name = altName["name"] as? String {
-                        nameList.append(name)
-                    }
-                }
-            }
-            curHere.alternativeNames = nameList
-        }
-        
-        // address has a <br>, parse it out? 231 Franklin St<br/>San Francisco, CA 94102
-        // Alternate names //Categories
-        hereItems.append(curHere)
-
-        // print("\(curHere.title) \(curHere.lat ?? 0) \(curHere.lon ?? 0) \(curHere.category) \(curHere.hereId)")
-        // print("\(curHere.distance ?? 0)")
-    }
-    return hereItems
-}
-
-// TEST and DEBUGGING
-func getHereTest(latitude: Double, longitude: Double) {
-    print("Run Here")
-    let app_id = "u0kMh9pqRbVbIRoRUDUR"
-    let app_code = "Sm_Nj0Z8V4_Ac-azowbweQ"
-    if let url = URL(string: "https://places.cit.api.here.com/places/v1/discover/around?at=\(latitude)%2C\(longitude)&Accept-Language=en-us%2Cen%3Bq%3D0.9&app_id=\(app_id)&app_code=\(app_code)") {
-        let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
-            if error != nil {
-                print(error!)
-            } else {
-                if let urlContent = data {
-                    do {
-                        let jsonResult = try JSONSerialization.jsonObject(with: urlContent, options: JSONSerialization.ReadingOptions.mutableContainers) as AnyObject
-                        if let places = (jsonResult["results"] as? NSDictionary)?["items"] as? NSArray {
-                            printHereItem(arrayValue: places)
-                        }
-                    } catch {
-                        print("JSON Processing Failed/n/n//n--------------------------")
-                    }
-                }
-            }
-        }
-        task.resume()
-    } else {
-        print("Couldn't get results from Here")
-    }
-}
-func getYelpTest(latitude: Double, longitude: Double) {
-    // let appId = "7OyP1OAh76FSPkKVRnoC2w"
-    let appSecret = "Bearer aeLA0m0U9cqOFqgN3CHVOQ_UaJDlB6DCysj23z-woyfmA4Mxf_nMjYO_clogiXE44VF06VohQBO0k-3TFJbEUWqxWr7fJmZJLTz2ojSmljIqsDBCfODqYTKgyK6OW3Yx"
-    let link = "https://api.yelp.com/v3/businesses/search?sort_by=distance&latitude=\(latitude)&longitude=\(longitude)"
-    if let url = URL(string: link) {
-        // Set headers
-        var request = URLRequest(url: url)
-        request.setValue("Accept-Language", forHTTPHeaderField: "en-us")
-        request.setValue(appSecret, forHTTPHeaderField: "Authorization")
-        
-        print("Attempting to get places around location from Yelp")
-        let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
-            if error != nil {
-                print(error!)
-            } else {
-                if let urlContent = data {
-                    do {
-                        let jsonResult = try JSONSerialization.jsonObject(with: urlContent, options: JSONSerialization.ReadingOptions.mutableContainers) as AnyObject
-                        if let places = jsonResult["businesses"] as? NSArray {
-                            var yelpBusinesses = [yelpBusinessSearch]()
-                            yelpBusinesses = parseYelpBusinessesArray(arrayValue: places)
-                            print("Count is \(yelpBusinesses.count)")
-                        }
-                    } catch {
-                        print("-------------------------\nJSON Processing Failed\n--------------------------")
-                    }
-                }
-            }
-        }
-        task.resume()
-    } else {
-        print("Couldn't get YELP")
-    }
-}
-var hereAPIHtml = """
-https://places.cit.api.here.com/places/v1/autosuggest
-?at=40.74917,-73.98529
-&q=chrysler
-&app_id=u0kMh9pqRbVbIRoRUDUR
-&app_code=Sm_Nj0Z8V4_Ac-azowbweQ
-"""
-*/
 
 /* MEMORY QUEUES
  1.0 If you can't Log On then
