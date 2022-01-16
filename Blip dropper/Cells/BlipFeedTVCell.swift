@@ -22,13 +22,11 @@ class BlipFeedTVCell: UITableViewCell {
         super.awakeFromNib()
         // Initialization code
     }
-
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
 
         // Configure the view for the selected state
     }
-    
     func applyThumb (thumbFile: PFFileObject?) {
         print(thumbFile ?? "nil file?")
         print(prevImageFile ?? "nil prev File")
@@ -37,12 +35,11 @@ class BlipFeedTVCell: UITableViewCell {
         // if your thumb file object is not nil but UIImage is then download
         
     }
-    
     func setBlipCell (blip: blipData) {
         blipImage.image = UIImage(named: "bLightGrey")
         blipTS.text = blip.blip_dt_txt
         blipLabel.text = blip.blip_note
-        blipLatLon.text = blip.blip_addr
+        blipLatLon.text = returnLocationString(location: blip.blip_location)
         blipUsername.text = blip.blip_id
         if blipLabel.text == "Rome pizza place" {
             print("found it")
@@ -97,5 +94,4 @@ class BlipFeedTVCell: UITableViewCell {
         }
     prevImageFile = blip.imageFile
     }
-
 }

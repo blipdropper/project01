@@ -59,54 +59,15 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
             if let posts = objects {
                 for post in posts {
                     curBlip = returnBlipPostFromDB(dbRow: post)
-                    /*
-                    if let blipdate = post["blip_date"] as? Date {
-                        curBlip.blip_dt_txt = returnStringDate(date: blipdate, dateFormat: "")
-                        curBlip.blip_dt = blipdate
-                    } else {
-                        print("Error setting date string")
-                    }
-                    curBlip.create_dt = curBlip.blip_dt
-                    curBlip.create_dt_txt = curBlip.blip_dt_txt
-                    curBlip.blip_addr = post["blip_address"] as! String
-                    curBlip.blip_location.subThoroughfare = post["subThoroughfare"] as! String
-                    curBlip.blip_location.thoroughfare = post["thoroughfare"] as! String
-                    curBlip.blip_location.subLocality = post["subLocality"] as! String
-                    curBlip.blip_location.locality = post["locality"] as! String
-                    curBlip.blip_location.subAdministrativeArea = post["subAdministrativeArea"] as! String
-                    curBlip.blip_location.administrativeArea = post["administrativeArea"] as! String
-                    curBlip.blip_location.postalCode = post["postalCode"] as! String
-                    curBlip.blip_location.country = post["country"] as! String
-
-                    curBlip.blip_note = post["blip_msg"] as! String
-                    curBlip.blip_id = (post.objectId!)
-                    curBlip.imageFile = post["imageFile"] as? PFFileObject
-                    curBlip.imageThumbFile = post["imageThumbFile"] as? PFFileObject
-                    curBlip.blip_lat = post["latitude"] as? Double
-                    curBlip.blip_lon = post["longitude"] as? Double
-                    if post["yelp_id"] != nil {
-                        curBlip.blip_yelp_id =  post["yelp_id"] as! String }
-                    if post["here_id"] != nil {
-                        curBlip.blip_here_id =  post["here_id"] as! String }
-                    if post["place_name"] != nil {
-                        curBlip.place_name = post["place_name"] as! String }
-                    if post["place_lat"] != nil {
-                        curBlip.place_lat  = post["place_lat"] as? Double }
-                    if post["place_addr"] != nil {
-                        curBlip.place_addr = post["place_addr"] as! String }
-                    if post["place_url"] != nil {
-                        curBlip.place_url = post["place_url"] as! String }
-                    */
                     // need to add the new blip post to rules and only run
-
                     loadedBlips.append(curBlip)
-
                     // --------------------------------
                     // Lets do some house keeping here
                     // --------------------------------
+                    // fixMissingBlipFiles(blip: curBlip)
                     if curBlip.imageFile == nil {
                         // Every blip should have an image file and definitely have a lat/lon, fix if it doesn't
-                        fixMissingBlipFiles(blip: curBlip)
+                        fixMissingBlipFiles(blip: curBlip) // if this is a perm fix then need to update icon in loaded blip array
                     }
                 }
             }

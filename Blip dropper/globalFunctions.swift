@@ -4,7 +4,8 @@
 //
 //  Created by DANIEL PATRIARCA on 12/20/21.
 //  Copyright © 2021 DANIEL PATRIARCA. All rights reserved.
-//
+//  git token: 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
+
 
 import Foundation
 import UIKit
@@ -36,7 +37,7 @@ func fixMissingBlipFiles (blip: blipData) {
     // Load blip to update
     let query = PFQuery(className: "BlipFile")
     query.whereKey("blip_id", equalTo: blip.blip_id)
-    query.order(byDescending: "createdAt")
+    query.order(byDescending: "create_dt") // changed from createdAt... any issue?
     query.findObjectsInBackground(block: { (objects, error) in
         var firstNonMapFile = blipFile()
         var mapFile = blipFile()
@@ -57,28 +58,29 @@ func fixMissingBlipFiles (blip: blipData) {
         } else {
             print(error?.localizedDescription ?? "Maybe no blip \(blip.blip_id)")
         }
-        print ("\(blip.blip_id): fileCntr=\(fileCntr) mapCntr=\(mapCntr) and blip says \(blip.fileCount)")
 
+        print ("\(blip.blip_id): fileCntr=\(fileCntr) mapCntr=\(mapCntr)")
+
+        // If blip has an image and no thumb create a thumb
         if blip.imageFile != nil && blip.imageThumbFile == nil {
-            // If blip has an image and no thumb create a thumb
             getBlipImage(blip: blip)
+        // If blip has no image set image to non-map if available and map if thats only file
         } else if blip.imageFile == nil && fileCntr > 0 {
-            // If blip has no image but has file then fix file count, set image to non-map if available and map if thats only file
             if fileCntr > mapCntr {
                 makeBlipFileBlipImage(newBlipIcon: firstNonMapFile)
             } else if mapCntr > 0 {
                 makeBlipFileBlipImage(newBlipIcon: mapFile)
             }
-        } else if fileCntr == 0 {
-            // If you have no image and no files then create a map image from lat/lon and add it as a file
+        }
+        // If you have no Map image for the blip then create a map image from lat/lon and add it as a file
+        if mapCntr == 0 {
+            print ("    > > Blip: \(blip.blip_id):\(blip.blip_note) has no map")
             getLatLonImageFileForBlip(blip: blip)
         }
-        //
-        // Don't forget to fix the blipcount blip in loadedBlips... find by the object id since it may change position while background stuff happens
-        // updateBlipFileCount
     })
 }
 func getLatLonImageFileForBlip(blip: blipData) {
+    // Use the blip lat/lon to get an image for that map area then call function to make that image a blipfile for blip
     if let lat =  blip.blip_lat, let lon = blip.blip_lon {
         let mapSnapshotOptions = MKMapSnapshotOptions()
         // Set the region of the map that is rendered.
@@ -106,6 +108,7 @@ func getLatLonImageFileForBlip(blip: blipData) {
     }
 }
 func postBlipLocationFile(mapImage: UIImage, blip: blipData) {
+    // Insert a new blipFile row for the missing map image using blip create dt
     var newBlipFile = blipFile()
     newBlipFile.file_type = "mapImage"
     newBlipFile.blip_id = blip.blip_id
@@ -117,22 +120,22 @@ func postBlipLocationFile(mapImage: UIImage, blip: blipData) {
             newBlipFile.imageFile = blipFile
             newBlipFile.imageThumbFile = blipFile
             // Really should make a real thumb
+
+            let blipFileRow = PFObject(className: "BlipFile")
+            blipFileRow["file_type"] = newBlipFile.file_type
+            blipFileRow["blip_id"] = newBlipFile.blip_id
+            blipFileRow["imageFile"] = newBlipFile.imageFile
+            blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
+            blipFileRow["create_dt"] = blip.create_dt
+            
+            blipFileRow.saveInBackground(block: { (success, error) in
+                if success {
+                    print("Save in bg MapImage File worked for blip: \(blip.blip_id)")
+                } else {
+                    print(error?.localizedDescription ?? "")
+                }
+            })
         }
-        let blipFileRow = PFObject(className: "BlipFile")
-        blipFileRow["file_type"] = newBlipFile.file_type
-        blipFileRow["blip_id"] = newBlipFile.blip_id
-        blipFileRow["imageFile"] = newBlipFile.imageFile
-        blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
-        blipFileRow["create_dt"] = blip.create_dt
-        
-        blipFileRow.saveInBackground(block: { (success, error) in
-            if success {
-                print("Save in bg MapImage File worked")
-                // update the file count or just create a "fix count function" for universal use
-            } else {
-                print(error?.localizedDescription ?? "")
-            }
-        })
     }
 }
 func makeBlipFileBlipImage (newBlipIcon: blipFile) {
@@ -157,8 +160,8 @@ func makeBlipFileBlipImage (newBlipIcon: blipFile) {
  }
 func getBlipFileImage (file: blipFile) {
     file.imageFile?.getDataInBackground { (data, error) in
-        print("attempt to create thumb for \(file.blip_id) file: \(file.file_id)")
-        print("Err:\(error?.localizedDescription ?? "")")
+        print("attempt to create thumb for blip:\(file.blip_id) file: \(file.file_id)")
+        if error != nil {print("Err:\(error?.localizedDescription ?? "")")}
         if let imageData = data {
             if let imageToDisplay = UIImage(data: imageData) {
                 saveBlipFileThumb(objectId: file.file_id, image: returnThumbnail(bigImage: imageToDisplay))
@@ -220,6 +223,7 @@ func saveParseThumb (objectId: String, image: UIImage) {
     }
 }
 func getBlipAddrFromLatLon (blip: blipData) {
+    // this is only to be used to fill any details about a placemark you didn't originally grab
     var center : CLLocationCoordinate2D = CLLocationCoordinate2D()
     var updatedBlip = blip
     if let lat = blip.blip_lat, let lon = blip.blip_lon {
@@ -534,6 +538,45 @@ func returnStringDate (date: Date, dateFormat: String) -> String {
     strDate = strDate.replacingOccurrences(of: "AM", with: "am")
     strDate = strDate.replacingOccurrences(of: "PM", with: "pm")
  return strDate
+}
+func returnLocationString (location: blipLocation) -> String {
+    var addrTxt = ""
+    let addrDelim = " "
+    
+    //if location.subThoroughfare != "" {
+    //    addrTxt += location.subThoroughfare + addrDelim
+    //}
+    //Number
+    if location.thoroughfare != "" {
+        addrTxt += location.thoroughfare + addrDelim
+    }
+    //Street
+    if location.locality != "" {
+        addrTxt += location.locality + addrDelim
+    }
+    //City
+    //if location.subLocality != "" {
+    //    addrTxt += location.subLocality + addrDelim
+    //}
+    //Neighborhood
+    //if location.subAdministrativeArea != "" {
+    //    addrTxt += location.subAdministrativeArea + addrDelim
+    //}
+    //County
+    if location.administrativeArea != "" {
+        addrTxt += location.administrativeArea + addrDelim
+    }
+    //State
+    //if location.postalCode != "" {
+    //    addrTxt += location.postalCode + addrDelim
+    //}
+    // Zip
+    //if location.country != "" {
+    //    addrTxt += location.country + addrDelim
+    //}
+    // Country
+    
+    return addrTxt
 }
 func rotateImage(image: UIImage) -> UIImage {
     if (image.imageOrientation == UIImage.Orientation.up) {

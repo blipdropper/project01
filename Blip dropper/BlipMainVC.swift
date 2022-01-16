@@ -272,19 +272,19 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                         blipFileRow["latitude"] = newBlipFile.file_lat
                         blipFileRow["longitude"] = newBlipFile.file_lon
                         blipFileRow["file_addr"] = newBlipFile.file_addr
+                        blipFileRow["file_type"] = newBlipFile.file_type
                         if exifDateOk {
                             blipFileRow["file_dt"] = newBlipFile.file_dt
                             blipFileRow["file_dt_txt"] = newBlipFile.file_dt_txt
                         }
-                        
                         // Set the PlaceTime for Blip if first PhotoMode image initial PostFile completed which declares blip
                         if self.PhotoMode && !self.initialActionComplete {
-                            self.blipPlace.setTitle(substr(stringValue: newBlipFile.file_addr, forInt: 30), for: [])
+                            curBlip.blip_location = self.location
                             curBlip.blip_lat = newBlipFile.file_lat
                             curBlip.blip_lon = newBlipFile.file_lon
                             curBlip.blip_addr = newBlipFile.file_addr
-                            curBlip.blip_location = self.location
-                            
+                            self.blipPlace.setTitle(returnLocationString(location: curBlip.blip_location), for: [])
+
                             if exifDateOk {
                                 self.blipDate.setTitle(newBlipFile.file_dt_txt, for: [])
                                 curBlip.blip_dt = newBlipFile.file_dt
@@ -501,15 +501,9 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         if snapshotRan == "initialized" {
             setBlipLocationImage(latitude: latitude, longitude: longitude, mode: "nopost")
         }
-        location.lat = latitude
-        location.lon = longitude
-        location.strLatitude = String(format: "%.8f", latitude)
-        location.strLongitude = String(format: "%.8f", longitude)
-        location.strCourse = String(userLocation.course)
-        location.strSpeed = String(userLocation.speed)
-        location.strAltitude = String(userLocation.altitude)
-        location.strLatLon = location.strLatitude + ", " + location.strLongitude
-        
+        print("Location set: \(latitude)")
+        print(longitude)
+
         // Reverse Geo Code for addr
         CLGeocoder().reverseGeocodeLocation(userLocation) { (placemarks, error) in
             if error != nil {
@@ -517,10 +511,21 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             } else {
                 if let placemark = placemarks?[0] {
                     self.location = returnLocationFromPlaceMark(pm: placemark)
-                    print(self.location.strAddress)
+                    self.location.lat = latitude
+                    self.location.lon = longitude
+                    self.location.strLatitude = String(format: "%.8f", latitude)
+                    self.location.strLongitude = String(format: "%.8f", longitude)
+                    self.location.strCourse = String(userLocation.course)
+                    self.location.strSpeed = String(userLocation.speed)
+                    self.location.strAltitude = String(userLocation.altitude)
+                    self.location.strLatLon = self.location.strLatitude + ", " + self.location.strLongitude
 
+                    print(self.location.strAddress)
                     if !self.locationSet {
                         print("start posting")
+                        print(self.location.lat)
+                        print(self.location.lon)
+                        
                         self.postInitialBlip()
                         // if snapshot done then post image as file because you have the image already
                         self.locationSet = true
@@ -594,7 +599,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         }
         
         blipDate.setTitle(curBlip.blip_dt_txt, for: [])
-        blipPlace.setTitle(substr(stringValue: curBlip.blip_addr, forInt: 30), for: [])
+        blipPlace.setTitle(returnLocationString(location: curBlip.blip_location), for: [])
         
         if PhotoMode {
             checkPhotoLibraryPermission()
@@ -768,7 +773,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         blipSave.isUserInteractionEnabled = false
     }
     func blipAltered() {
-        blipSave.setTitle("SAVE", for: [])
+        //blipSave.setTitle("SAVE", for: [])
+        print("Save Mode")
     }
     
     // ----------------------------------------
@@ -843,7 +849,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         
         //-- Get Labels for text and image from Blip
         blipDate.setTitle(curBlip.blip_dt_txt, for: [])
-        blipPlace.setTitle(substr(stringValue: curBlip.blip_addr, forInt: 30), for: [])
+        blipPlace.setTitle(returnLocationString(location: curBlip.blip_location), for: [])
 
         textView.text = curBlip.blip_note
         checkPlaceHolderText()
