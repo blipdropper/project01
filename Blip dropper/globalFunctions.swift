@@ -589,3 +589,34 @@ func rotateImage(image: UIImage) -> UIImage {
 
     return copy!
 }
+func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (heading: String, remainingText: String, breakChar: String) {
+    var heading = fullString
+    var remainingText = ""
+    var breakChar = ""
+
+    // If the Full string has less characters than break point then just return full blurb as heading and blank out 2
+    if fullString.count > charBreakPoint {
+        // Get N characters out of total char count (hardcoded to 30 can this be dynamic?)
+        var prefix = String(fullString.prefix(charBreakPoint))
+
+        // Find the last space in heading so you can continue message there
+        let lastSpace = prefix.lastIndex(of: " ") ?? prefix.endIndex
+        var breakPoint = lastSpace
+        breakChar = " "
+
+        // If there is a /n clip there
+        if let newLine = prefix.firstIndex(of: "\n") {
+            prefix = String(prefix[..<newLine])
+            breakPoint = newLine
+            breakChar = "\n"
+        }
+        // Use the Break Point to split the message in 2
+        let breakPointInt: Int = fullString.distance(from: fullString.startIndex, to: breakPoint)
+        heading = String(fullString.prefix(breakPointInt))
+        remainingText = String(fullString.suffix(fullString.count - breakPointInt - 1))
+        // print (heading + breakChar + remainingText)
+    }
+    
+    return (heading,remainingText,breakChar)
+}
+

@@ -24,32 +24,24 @@ class BlipFeedTVCell: UITableViewCell {
     }
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
-
         // Configure the view for the selected state
     }
-    func applyThumb (thumbFile: PFFileObject?) {
-        print(thumbFile ?? "nil file?")
-        print(prevImageFile ?? "nil prev File")
-        prevImageFile = thumbFile
-        // if you have no thumb but have an image then create a thumb
-        // if your thumb file object is not nil but UIImage is then download
-        
-    }
-    func setBlipCell (blip: blipData) {
+    func setBlipRow (blip: blipData) {
         blipImage.image = UIImage(named: "bLightGrey")
         blipTS.text = blip.blip_dt_txt
-        blipLabel.text = blip.blip_note
         blipLatLon.text = returnLocationString(location: blip.blip_location)
-        blipUsername.text = blip.blip_id
-        if blipLabel.text == "Rome pizza place" {
-            print("found it")
-        }
+
+        let noteBreak = breakOutHeadingFromString(fullString: blip.blip_note, charBreakPoint: 30)
+        blipLabel.text = noteBreak.remainingText
+        blipUsername.text = noteBreak.heading
+        
         blipImage.layer.cornerRadius = 0.0
         blipImage.clipsToBounds = false
         blipImage.layer.borderColor = UIColor.gray.cgColor
         blipImage.layer.borderWidth = 0.0
 
         // Reset Index 0 table row for new blips with no image
+        /*
         if blip.imageFile == nil {
             //print("image NIL")
 //            blipImage.image = nil
@@ -58,26 +50,27 @@ class BlipFeedTVCell: UITableViewCell {
             blipImage.layer.borderColor = UIColor.gray.cgColor
             blipImage.layer.borderWidth = 0.0
         }
-        
+         */
+
         if blip.imageUIImage != nil {
             // this needs to be in a format function to clean up code
             blipImage.image = blip.imageUIImage
-            blipImage.layer.cornerRadius = blipImage.frame.size.width / 2
+            blipImage.layer.cornerRadius = blipImage.frame.size.width / 4
             blipImage.clipsToBounds = true
             blipImage.layer.borderColor = UIColor.gray.cgColor
-            blipImage.layer.borderWidth = 3.0
+            blipImage.layer.borderWidth = 1.0
         } else {
-            // UI image for cell was NULL... not sure why it ever wouldn't be?
-            blip.imageFile?.getDataInBackground { (data, error) in
-                if let isCached = blip.imageFile?.isDataAvailable {
-                    if isCached || (self.prevImageFile == blip.imageFile) {
+            // UI image for cell was NULL... not sure why it ever wouldn't be? Load from Cached data?
+            blip.imageThumbFile?.getDataInBackground { (data, error) in
+                if let isCached = blip.imageThumbFile?.isDataAvailable {
+                    if isCached || (self.prevImageFile == blip.imageThumbFile) {
                         if let imageData = data {
                             if let imageToDisplay = UIImage(data: imageData) {
                                 self.blipImage.image = imageToDisplay
-                                self.blipImage.layer.cornerRadius = self.blipImage.frame.size.width / 2
+                                self.blipImage.layer.cornerRadius = self.blipImage.frame.size.width / 4
                                 self.blipImage.clipsToBounds = true
                                 self.blipImage.layer.borderColor = UIColor.gray.cgColor
-                                self.blipImage.layer.borderWidth = 3.0
+                                self.blipImage.layer.borderWidth = 1.0
                                 //self.blipImage.layer.cornerRadius = 10.0;
                                 //self.blipImage.borderColor = UIColor( red: 0.5, green: 0.5, blue:0, alpha: 1.0 )
                             }
@@ -85,13 +78,13 @@ class BlipFeedTVCell: UITableViewCell {
                             print(error?.localizedDescription ?? "")
                         }
                     } else {
-                        print("not already cached or prev <> curr and cell reused")
+                        print("not already cached or prev <> curr and row reused")
                     }
                 } else {
                     print("imageFile was nil")
                 }
             }
         }
-    prevImageFile = blip.imageFile
+    prevImageFile = blip.imageThumbFile
     }
 }

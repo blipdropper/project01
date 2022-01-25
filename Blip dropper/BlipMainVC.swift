@@ -14,7 +14,7 @@ import AVFoundation
 import Photos
 import Parse
 
-class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UITextViewDelegate, UIScrollViewDelegate {
+class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UITextViewDelegate, UIScrollViewDelegate {
     // ----------------------------------------
     // IBOUTLETS, ACTIONS, and variables
     private let imagePicker = UIImagePickerController()
@@ -32,6 +32,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     var PhotoMode = false
     var cameraPhotoSwitch = ""
     var txtIsPlaceHolder = false
+    var txtIsEditing = false
     var initialActionComplete = false
     let addrDelim = " "
     var placeHolderText = "Enter some details about your Blip!"
@@ -73,7 +74,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     @IBAction func pickBlipPlace(_ sender: Any) {
         print("Clicked Pick BlipPlace")
-        self.performSegue(withIdentifier: "showPlaceTimePicker", sender: self)
+        //self.performSegue(withIdentifier: "showPlaceTimePicker", sender: self)
     }
 
     // ----------------------------------------
@@ -87,6 +88,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         if !txtIsPlaceHolder {
             curBlip.blip_note = self.textView.text
         }
+        // Why are you regetting the post you already had to acces to fill in data or do initial save on load?
         let query = PFQuery(className: "BlipPost")
         query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
         query.getObjectInBackground(withId: curBlip.blip_id) { (blip, error) in
@@ -147,6 +149,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         loadedBlips[curBlip.arrayPosition].place  = curBlip.place
 
         //found nil wile unwrapping an optional after hitting place off of new no pic blip
+        print(curBlip.blip_dt)
         loadedBlips.sort(by: { $0.blip_dt?.compare(($1.blip_dt)!) == .orderedDescending }) // newest to oldest
     }
 
@@ -383,11 +386,33 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             } else if AVCaptureDevice.authorizationStatus(for: AVMediaType.video) ==  AVAuthorizationStatus.denied {
                 self.showCameraPermissionDialog()
             } else {
+                /*
                 AVCaptureDevice.requestAccess(for: AVMediaType.video, completionHandler: { (granted: Bool) -> Void in
                     if granted == true {
                         self.openCameraPicker()
                     } else {
                         self.showCameraPermissionDialog()
+                    }
+                })
+                 */
+                //------------ Maybe
+                /*
+                func requestCameraPermission() {
+                2    AVCaptureDevice.requestAccess(for: .video, completionHandler: {accessGranted in
+                3        guard accessGranted == true else { return }
+                4        self.presentCamera()
+                5    })
+                6}
+                */ //------------ Maye
+                
+                AVCaptureDevice.requestAccess(for: AVMediaType.video, completionHandler: { (granted: Bool)
+                    in
+                    DispatchQueue.main.async {
+                        if granted == true {
+                            self.openCameraPicker()
+                        } else {
+                            self.showCameraPermissionDialog()
+                        }
                     }
                 })
             }
@@ -402,21 +427,39 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         case .authorized:
             self.openPhotoPicker()
             break
-        case .denied, .restricted :
+        case .denied, .restricted:
             self.showPhotoPermissionDialog()
             break
         case .notDetermined:
             // ask for permissions
+            PHPhotoLibrary.requestAuthorization({
+                    (status) in
+                DispatchQueue.main.async {
+                    switch status {
+                    case .authorized:
+                        self.openPhotoPicker()
+                        break
+                    case .denied, .restricted:
+                        self.showPhotoPermissionDialog()
+                        break
+                    case .notDetermined:
+                        self.alert("Unexpected error occured for accessing photo library")
+                        break
+                    case .limited:
+                        self.openPhotoPicker()
+                        break
+                    }
+                }
+            })
+            /*
             PHPhotoLibrary.requestAuthorization() { (status) -> Void in
                 switch status {
                 case .authorized:
                     self.openPhotoPicker()
                     break
-                // as above
                 case .denied, .restricted:
                     self.showPhotoPermissionDialog()
                     break
-                // as above
                 case .notDetermined:
                     self.alert("Unexpected error occured for accessing photo library")
                     break
@@ -425,6 +468,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     break
                 }
             }
+            */
         case .limited:
             self.openPhotoPicker()
             break
@@ -614,30 +658,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return blipFiles.count
     }
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+            let width  = (collectionView.frame.width-30)/4
+            let height = width
+            return CGSize(width: width, height: height)
+    }
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell:BlipMainCell = collectionView.dequeueReusableCell(withReuseIdentifier: "fileCell", for: indexPath) as! BlipMainCell
-        cell.curBlipFile = blipFiles[indexPath.row]
-
-        if blipFiles[indexPath.row].imageUIImage == nil {
-            // Get the image from the image data
-            blipFiles[indexPath.row].imageFile?.getDataInBackground { (data, error) in
-                if let imageData = data {
-                    if let imageToDisplay = UIImage(data: imageData) {
-                        cell.image.image = imageToDisplay
-                    }
-                }
-            }
-        } else {
-            cell.image.image = blipFiles[indexPath.row].imageUIImage
-        }
-        
-        if blipFiles[indexPath.row].file_type == "mapImage" {
-            print ("map image YES")
-            cell.cellLabel.text = curBlip.place_name
-        } else {
-            print ("map image NO")
-            cell.cellLabel.text = ""
-        }
+        cell.setBlipCell(file: blipFiles[indexPath.row])
         return cell
     }
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -673,8 +701,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     // VIEW DID LOAD
     override func viewDidAppear(_ animated: Bool) {
         print("View Did Apear says \(curBlip.place_name)")
-        // reload so that the place information updates the cell
-        blipFileCollectionView.reloadData()
+        // Need to figire out that place information updated so you can refresh the cell
+        // blipFileCollectionView.reloadData()
 
         if curBlip.mode == "newPlace", let newBlipPlace = curBlip.place {
             print("Add blipFile for: \(newBlipPlace.name)  \(newBlipPlace.yelp?.imageURL ?? "") " )
@@ -741,10 +769,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
-        blipChoosePlace.isUserInteractionEnabled = true
-        blipAddPhoto.isUserInteractionEnabled = true
-        blipOpenCamera.isUserInteractionEnabled = true
-        blipSave.isUserInteractionEnabled = true
+        userInteractionEnabledToggle(isEnabled: true)
         print("Ending touches began")
     }
     func textViewDidChange(_ ttextView: UITextView) {
@@ -767,14 +792,19 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             textView.textColor = UIColor.black
             txtIsPlaceHolder = false
         }
-        blipChoosePlace.isUserInteractionEnabled = false
-        blipAddPhoto.isUserInteractionEnabled = false
-        blipOpenCamera.isUserInteractionEnabled = false
-        blipSave.isUserInteractionEnabled = false
+        userInteractionEnabledToggle(isEnabled: false)
     }
     func blipAltered() {
         //blipSave.setTitle("SAVE", for: [])
         print("Save Mode")
+    }
+    func userInteractionEnabledToggle(isEnabled: Bool) {
+        imageView.isUserInteractionEnabled = isEnabled
+        blipChoosePlace.isUserInteractionEnabled = isEnabled
+        blipAddPhoto.isUserInteractionEnabled = isEnabled
+        blipOpenCamera.isUserInteractionEnabled = isEnabled
+        blipSave.isUserInteractionEnabled = isEnabled
+        txtIsEditing = !isEnabled
     }
     
     // ----------------------------------------
@@ -831,8 +861,8 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         scroller.setZoomScale(0.0, animated: true)
     }
     func checkPlaceHolderText() {
-        textView.layer.borderWidth = 1
-        textView.layer.borderColor = UIColor.red.cgColor
+        //textView.layer.borderWidth = 1
+        //textView.layer.borderColor = UIColor.red.cgColor
 
         if textView.text == "" {
             textView.text = placeHolderText
@@ -867,7 +897,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         // Get Blip Files for the existing blip
         let query = PFQuery(className: "BlipFile")
         query.whereKey("blip_id", equalTo: curBlip.blip_id)
-        query.order(byAscending: "createdAt")
+        query.order(byAscending: "create_dt")
         query.findObjectsInBackground(block: { (objects, error) in
             // Get files array of objects
             if let files = objects {

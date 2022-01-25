@@ -12,14 +12,13 @@ import UIKit
 import Parse
 
 class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
-    // ----------------------------------------
-    // IBOUTLETS, ACTIONS, and variables
     var foundCntr = 0
     var missingCntr = 0
-    
     var PhotoModeButton = false
 
     @IBOutlet weak var FeedTableView: UITableView!
+    @IBOutlet weak var newBlip: UIButton!
+    @IBOutlet weak var newBlipPhoto: UIButton!
 
     @IBAction func logOut(_ sender: Any) {
         PFUser.logOut()
@@ -33,16 +32,12 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
         curBlip = blipData()
         self.performSegue(withIdentifier: "showBlip", sender: self)
     }
-    
     @IBAction func newBlip(_ sender: Any) {
         // Blank out the current Blip because we want new one
         PhotoModeButton = false
         curBlip = blipData()
         self.performSegue(withIdentifier: "showBlip", sender: self)
     }
-
-    // ----------------------------------------
-    // VIEW DID LOAD
     override func viewDidLoad() {
         super.viewDidLoad()
         print("ViewDidLoad.BlipFeedVC")
@@ -51,7 +46,6 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
         // Query Parse Server... need to clean up what you need to check for nil on curBlip so you can post changes to Blip
         let query = PFQuery(className: "BlipPost")
         query.whereKey("user_id", equalTo: PFUser.current()?.objectId ?? "")
-        //query.whereKeyDoesNotExist("imageFile")
         query.order(byDescending: "blip_date")
         query.limit = 1000 // Need to change this to smooth updating of infinite value like instagram/facebook
         query.findObjectsInBackground(block: { (objects, error) in
@@ -61,10 +55,8 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
                     curBlip = returnBlipPostFromDB(dbRow: post)
                     // need to add the new blip post to rules and only run
                     loadedBlips.append(curBlip)
-                    // --------------------------------
-                    // Lets do some house keeping here
-                    // --------------------------------
-                    // fixMissingBlipFiles(blip: curBlip)
+ 
+                    // Lets do some house keeping for when new blip files don't post
                     if curBlip.imageFile == nil {
                         // Every blip should have an image file and definitely have a lat/lon, fix if it doesn't
                         fixMissingBlipFiles(blip: curBlip) // if this is a perm fix then need to update icon in loaded blip array
@@ -78,12 +70,12 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
             }
             print ("FOUND=\(self.foundCntr) MISSING=\(self.missingCntr)")
         })
+        setViewLayout()
         print("ViewDidLoad all done")
     }
-    
     override func viewDidAppear(_ animated: Bool) {
         self.FeedTableView.reloadData()
-      }
+    }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "showBlip"{
@@ -102,7 +94,7 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     }
     internal func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "blipCell", for: indexPath) as! BlipFeedTVCell
-        cell.setBlipCell(blip: loadedBlips[indexPath.row])
+        cell.setBlipRow(blip: loadedBlips[indexPath.row])
         
         return cell
     }
@@ -144,7 +136,12 @@ class BlipFeedVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
             })
         }
     }
-
+    func setViewLayout (){
+        newBlip.clipsToBounds = true
+        newBlip.layer.cornerRadius = newBlip.frame.size.width / 8
+        newBlipPhoto.clipsToBounds = true
+        newBlipPhoto.layer.cornerRadius = newBlipPhoto.frame.size.width / 8
+    }
     /* Alternate Back Button (self.dismiss currently)
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
