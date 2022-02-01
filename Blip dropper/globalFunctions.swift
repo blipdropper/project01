@@ -602,7 +602,7 @@ func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (head
         // Find the last space in heading so you can continue message there
         let lastSpace = prefix.lastIndex(of: " ") ?? prefix.endIndex
         var breakPoint = lastSpace
-        breakChar = " "
+        breakChar = "|"
 
         // If there is a /n clip there
         if let newLine = prefix.firstIndex(of: "\n") {
@@ -612,11 +612,38 @@ func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (head
         }
         // Use the Break Point to split the message in 2
         let breakPointInt: Int = fullString.distance(from: fullString.startIndex, to: breakPoint)
+        // if the string has a eliptical ... then the break point is off by 2 because it 1 char in but 3 in
         heading = String(fullString.prefix(breakPointInt))
         remainingText = String(fullString.suffix(fullString.count - breakPointInt - 1))
-        // print (heading + breakChar + remainingText)
     }
-    
+    if heading.contains("…") {
+        print("\(fullString)")
+        print (heading + breakChar + remainingText)
+    }
+
     return (heading,remainingText,breakChar)
 }
-
+// if a string contains any of the characters from a custom set" and not checking for all characters in the custom set.
+func check(in string: String, forAnyIn characters: String) -> Bool {
+    /* USAGE:
+     check(in: "abc", forAnyIn: "A") // false
+     check(in: "abc", forAnyIn: "b") // true
+     */
+    // create one character set
+    let customSet = CharacterSet(charactersIn: characters)
+    // use the rangeOfCharacter(from: CharacterSet) function
+    return string.rangeOfCharacter(from: customSet) != nil
+}
+func showAlertFromAppDelegate(title: String, message: String){
+    var topWindow: UIWindow? = UIWindow(frame: UIScreen.main.bounds)
+    topWindow?.rootViewController = UIViewController()
+    //topWindow?.windowLevel = UIWindow.Level.alert + 1
+    let alert: UIAlertController =  UIAlertController(title: title, message: message, preferredStyle: .alert)
+    alert.addAction(UIAlertAction.init(title: "OK", style: .default, handler: { (alertAction) in
+        topWindow?.isHidden = true
+        topWindow = nil
+    }))
+    topWindow?.makeKeyAndVisible()
+    topWindow?.rootViewController?.present(alert, animated: true, completion:nil)
+    // showAlertFromAppDelegate(title: "No Images Returned", message: "Adding that filter wouldn't return any images, please try again")
+}

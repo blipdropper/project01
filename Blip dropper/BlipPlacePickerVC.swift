@@ -23,6 +23,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     var hereDone = false
     var blipPlaces = [blipPlace]()
     var curBlipPlace = blipPlace()
+    var mapRegionTimer: Timer?
+    var scheduledTimertimeInterval = 1.0
     var set = false
     var test1 = 0
     var mode = ""
@@ -48,7 +50,24 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
         runTimer()
     }
-    
+
+// -------  START that web thing
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        setMapRegionTimer()
+    }
+
+    func setMapRegionTimer() {
+        mapRegionTimer?.invalidate()
+        // Configure delay as bet fits your application
+        mapRegionTimer = Timer.scheduledTimer(timeInterval: scheduledTimertimeInterval, target: self, selector: #selector(mapRegionTimerFired), userInfo: nil, repeats: false)
+    }
+
+    @objc func mapRegionTimerFired(sender: AnyObject) {
+        // Load markers for current region:
+        //   mapView.centerCoordinate or mapView.region
+        
+        print("timer did a thing")
+    }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
     }

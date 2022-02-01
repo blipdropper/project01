@@ -201,6 +201,8 @@ func returnBlipPostFromDB (dbRow: PFObject)-> blipData {
         blipData.place_name = dbRow["place_name"] as! String }
     if dbRow["place_lat"] != nil {
         blipData.place_lat  = dbRow["place_lat"] as? Double }
+    if dbRow["place_lon"] != nil {
+        blipData.place_lon  = dbRow["place_lon"] as? Double }
     if dbRow["place_addr"] != nil {
         blipData.place_addr = dbRow["place_addr"] as! String }
     if dbRow["place_url"] != nil {

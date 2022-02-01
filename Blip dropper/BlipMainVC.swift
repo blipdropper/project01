@@ -12,6 +12,7 @@ import MapKit
 import CoreLocation
 import AVFoundation
 import Photos
+import PhotosUI
 import Parse
 
 class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UITextViewDelegate, UIScrollViewDelegate {
@@ -422,6 +423,11 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     //-- For Photos
     private func checkPhotoLibraryPermission() {
+        if #available(iOS 14, *) {
+             print("running on ios 14 or beyond")
+        } else {
+            print("running on old ios from before phpicker")
+        }
         let status = PHPhotoLibrary.authorizationStatus()
         switch status {
         case .authorized:
@@ -451,24 +457,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     }
                 }
             })
-            /*
-            PHPhotoLibrary.requestAuthorization() { (status) -> Void in
-                switch status {
-                case .authorized:
-                    self.openPhotoPicker()
-                    break
-                case .denied, .restricted:
-                    self.showPhotoPermissionDialog()
-                    break
-                case .notDetermined:
-                    self.alert("Unexpected error occured for accessing photo library")
-                    break
-                case .limited:
-                    self.openPhotoPicker()
-                    break
-                }
-            }
-            */
         case .limited:
             self.openPhotoPicker()
             break
@@ -517,18 +505,57 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         mapSnapshotOptions.showsPointsOfInterest = true
         
         let snapShotter = MKMapSnapshotter(options: mapSnapshotOptions)
-
+        
         snapShotter.start { (snapshot, error) in
             if error == nil {
                 print("snapshotter thinks no error")
                 if let image = snapshot?.image {
-                    self.mapImage = image
-                    self.imageView.image = image
+                    var returnImage = image
+                    var centerPointImage = UIImage()
+                    var centerPointWidth = 0.0
+                    var centerPointHeight = 0.0
+                    let scaleFactor = 1.0
+                    
+                    if let mapCenterImage = UIImage(named: "bPurpleAnnotation") {
+                        centerPointImage = mapCenterImage
+                        centerPointWidth = centerPointImage.size.width * scaleFactor
+                        centerPointHeight = centerPointImage.size.height * scaleFactor
+                    }
+                    UIGraphicsBeginImageContext(image.size)
+                    let areaSize = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height)
+                    let centerPointAreaSize = CGRect(x: image.size.width / 2 - centerPointWidth / 2, y: image.size.height / 2 - centerPointHeight / 2, width: centerPointWidth, height: centerPointHeight)
+                    image.draw(in: areaSize)
+                    centerPointImage.draw(in: centerPointAreaSize, blendMode: .normal, alpha: 0.4)
+                    if let finalImage = UIGraphicsGetImageFromCurrentImageContext() {
+                        returnImage = finalImage
+                    }
+                    UIGraphicsEndImageContext()
+                    /*
+                    var annotation = MKPointAnnotation()
+                    annotation.coordinate = coordinates[0]
+                    annotation.title = "Your Title"
+
+                    let annotationView = CustomAnnotationView(annotation: annotation, reuseIdentifier: "annotation")
+                    let pinImage = annotationView.image
+
+                    UIGraphicsBeginImageContextWithOptions(image.size, true, image.scale);
+
+                    image.drawAtPoint(CGPointMake(0, 0)) //map
+
+                    // pinImage!.drawAtPoint(snapshot.pointForCoordinate(coordinates[0]))
+                    annotationView.drawViewHierarchyInRect(CGRectMake(snapshot.pointForCoordinate(coordinates[0]).x, snapshot.pointForCoordinate(coordinates[0]).y, annotationView.frame.size.width, annotationView.frame.size.height), afterScreenUpdates: true)
+                    let finalImage = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+                    */
+                    self.mapImage = returnImage
+                    self.imageView.image = returnImage
                     self.snapshotRan = "done"
                     print("snapshotter thinks image set")
                     if mode == "postfile" {
-                        self.postLocationFile(mapImage: image)
+                        self.postLocationFile(mapImage: returnImage)
                     }
+
+
                 } else {
                     print("snapshotter didn't get image for some reason?")
                 }
@@ -678,14 +705,14 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         if curBlip.place_name == "" {
             appleMapPin = "Blip&ll=\(curBlip.blip_lat ?? 0.0),\(curBlip.blip_lon ?? 0.0)"
         } else {
-            appleMapPin = "\(curBlip.place_name)"
+            appleMapPin = curBlip.place_name
             appleMapPin = appleMapPin.addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "!*'();:@&=+$,/?%#[]{} ").inverted) ?? ""
-            appleMapPin = "\(appleMapPin)&sll=\(curBlip.blip_lat ?? 0.0),\(curBlip.blip_lon ?? 0.0)"
+            appleMapPin = "\(appleMapPin)&sll=\(curBlip.place_lat ?? 0.0),\(curBlip.place_lon ?? 0.0)"
         }
         print(appleMapPin)
         let urlString = "http://maps.apple.com/?q=\(appleMapPin)"
-//        let urlString = "http://maps.apple.com/?q=\(appleMapPin)&ll=\(curBlip.blip_lat ?? 0.0),\(curBlip.blip_lon ?? 0.0)"
-        print(urlString)
+        print("URL String: \(urlString)")
+
         if let url = URL(string: urlString), selectedCell.curBlipFile.file_type == "mapImage" {
             if UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
@@ -952,7 +979,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
 
 // ----------------------------------------
 // EXTENSION for EXIF IMAGE PICKER CONTROLLER
-extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDelegate, PHPickerViewControllerDelegate {
     public func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         self.dismiss(animated: true, completion: nil)
     }
@@ -965,34 +992,38 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
             
             if imagePicker.sourceType == .photoLibrary {
                 print("Photo Library Mode")
-                // Extract Exif Data from Phone
-                let asset = info[UIImagePickerControllerPHAsset] as! PHAsset
-                //let imageThumb  = self.getAssetThumbnail(asset: asset)
-                let options = PHContentEditingInputRequestOptions()
-                options.isNetworkAccessAllowed = true //download asset metadata from iCloud if needed
-                asset.requestContentEditingInput(with: options) { (contentEditingInput: PHContentEditingInput?, _) -> Void in
-                    let fullImage = CIImage(contentsOf: contentEditingInput!.fullSizeImageURL!, options: nil)
-                    // EXTRACT EXIF PROPERTIES
-                    if let properties = fullImage?.properties {
-                        print("start exif on selected image")
-                        self.exif = Exif(properties)
-                        // Check for valid placetime
-                        if self.exif?.gps?.dateStamp != nil && self.exif?.gps?.timeStamp != nil && self.exif?.gps?.timeZoneAbbreviation != nil {
-                            print("EXIF time set")
+
+                if let asset = info[UIImagePickerControllerPHAsset] as? PHAsset {
+                    // Extract Exif Data from Phone
+                    //let imageThumb  = self.getAssetThumbnail(asset: asset)
+                    let options = PHContentEditingInputRequestOptions()
+                    options.isNetworkAccessAllowed = true //download asset metadata from iCloud if needed
+                    asset.requestContentEditingInput(with: options) { (contentEditingInput: PHContentEditingInput?, _) -> Void in
+                        let fullImage = CIImage(contentsOf: contentEditingInput!.fullSizeImageURL!, options: nil)
+                        // EXTRACT EXIF PROPERTIES
+                        if let properties = fullImage?.properties {
+                            print("start exif on selected image")
+                            self.exif = Exif(properties)
+                            // Check for valid placetime
+                            if self.exif?.gps?.dateStamp != nil && self.exif?.gps?.timeStamp != nil && self.exif?.gps?.timeZoneAbbreviation != nil {
+                                print("EXIF time set")
+                            } else {
+                                print("missing time on exif")
+                            }
+                            if self.exif?.gps?.latitude != nil && self.exif?.gps?.latitude != nil {
+                              print("EXIF lat/lon set")
+                            } else {
+                                print("missing lat/lon")
+                            }
+                            print("done exif on selected image")
+                            // POST SELECTED FILE TO SERVER
+                            self.postFile(fileType: "image")
                         } else {
-                            print("missing time on exif")
+                            self.postFile(fileType: "image")
                         }
-                        if self.exif?.gps?.latitude != nil && self.exif?.gps?.latitude != nil {
-                          print("EXIF lat/lon set")
-                        } else {
-                            print("missing lat/lon")
-                        }
-                        print("done exif on selected image")
-                        // POST SELECTED FILE TO SERVER
-                        self.postFile(fileType: "image")
-                    } else {
-                        self.postFile(fileType: "image")
                     }
+                } else {
+                    showAlertFromAppDelegate(title: "Need Photo Permission", message: "Please go to Settings>> Blip dropper>> Photos>> All Photos in order to upoad photos")
                 }
             } else if imagePicker.sourceType == .camera {
                 postFile(fileType: "image")
@@ -1012,6 +1043,43 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
             thumbnail = result!
         })
         return thumbnail
+    }
+    @objc func pickPhotos(){
+            var config = PHPickerConfiguration()
+            config.selectionLimit = 1 // only 1 image per blip for now
+            config.filter = PHPickerFilter.images
+            
+            let pickerViewController = PHPickerViewController(configuration: config)
+            pickerViewController.delegate = self
+            self.present(pickerViewController, animated: true, completion: nil)
+    }
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true, completion: nil)
+        print(picker)
+        print(results)
+        
+        for result in results {
+            print(result.assetIdentifier)
+            print(result.itemProvider)
+            
+            result.itemProvider.loadObject(ofClass: UIImage.self, completionHandler: { (object, error) in
+                print(object)
+                print(error)
+                
+                if let image = object as? UIImage {
+                    DispatchQueue.main.async {
+                        // you have the selected image(s), now do something with it
+                        // how will you get the exif off it?
+                        /*
+                        let imv = self.newImageView(image: image)
+                        self.imageViews.append(imv)
+                        self.scrollView.addSubview(imv)
+                        self.view.setNeedsLayout()
+                        */
+                    }
+                }
+            })
+        }
     }
 }
 
