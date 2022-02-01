@@ -41,8 +41,10 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     @IBAction func searchArea(_ sender: Any) {
         print("Rerun the Yelp places list for map area... if an address is in the text box reset map to there... if its not an address filter?")
         print("Lat = \(map.centerCoordinate.latitude) Lon = \(map.centerCoordinate.longitude)")
-
         // Refresh the Places list
+        searchArea()
+    }
+    func searchArea() {
         yelpDone = false
         hereDone = false
         blipPlaces = [blipPlace]()
@@ -50,28 +52,22 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
         runTimer()
     }
-
-// -------  START that web thing
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
         setMapRegionTimer()
     }
-
     func setMapRegionTimer() {
         mapRegionTimer?.invalidate()
         // Configure delay as bet fits your application
         mapRegionTimer = Timer.scheduledTimer(timeInterval: scheduledTimertimeInterval, target: self, selector: #selector(mapRegionTimerFired), userInfo: nil, repeats: false)
     }
-
     @objc func mapRegionTimerFired(sender: AnyObject) {
         // Load markers for current region:
         //   mapView.centerCoordinate or mapView.region
-        
         print("timer did a thing")
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
     }
-    
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         // find places using apple map (not interoperable with address search setting map to area)
         let searchRequest = MKLocalSearchRequest()
@@ -136,11 +132,9 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
 
         return true
     }
-    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return blipPlaces.count
     }
-    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = PlaceTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipPlaceTVCell
         cell.mode = "select"
@@ -151,7 +145,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
 
         return cell
     }
-    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         // how can you move this to a button tap on the tableview cell class
         curBlipPlace = blipPlaces[indexPath.row]
@@ -172,7 +165,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         return true
     }
-
     override func viewDidLoad() {
         super.viewDidLoad()
         printLog(stringValue: "View Did load happened")
@@ -197,7 +189,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             
         }
     }
-
     func runTimer() {
         var runCount = 0
         printLog(stringValue: "Timer function received   ")
@@ -301,7 +292,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             }
         }
     }
-    
     func getYelp(latitude: Double, longitude: Double) {
         // let appId = "7OyP1OAh76FSPkKVRnoC2w"
         let link = "https://api.yelp.com/v3/businesses/search?sort_by=distance&latitude=\(latitude)&longitude=\(longitude)"
@@ -335,7 +325,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             print("-------------------------\nYelp API Link failed\n--------------------------")
         }
     }
-    
     func getHere(latitude: Double, longitude: Double) {
         if let url = URL(string: "https://places.cit.api.here.com/places/v1/discover/around?at=\(latitude)%2C\(longitude)&Accept-Language=en-us%2Cen%3Bq%3D0.9&app_id=\(hereAppId)&app_code=\(hereAppCode)") {
             print("Attempting to get places around location from Here")
@@ -365,7 +354,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             print("Couldn't get results from Here")
         }
     }
-
     // ----------------------------------------
     // Maps and Annotations
     func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
@@ -403,7 +391,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         }
     }
 }
-
 extension BlipPlacePickerVC: customCellDelegate {
     func didTapButton1(msg: String, indexPath: Int) {
         self.topLabel.text = "\(msg)... selected row \(indexPath)"
@@ -411,11 +398,9 @@ extension BlipPlacePickerVC: customCellDelegate {
         print ("selected row \(indexPath)")
         
     }
-    
     func didTapButton2(alert: String) {
         self.topLabel.text = alert
     }
-    
 }
 
 

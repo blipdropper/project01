@@ -502,7 +502,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         mapSnapshotOptions.size = imageView.frame.size
         // Show buildings and Points of Interest on the snapshot
         mapSnapshotOptions.showsBuildings = true
-        mapSnapshotOptions.showsPointsOfInterest = true
+        mapSnapshotOptions.pointOfInterestFilter = MKPointOfInterestFilter(including: [.bank, .atm, .restaurant, .amusementPark, .bakery])
         
         let snapShotter = MKMapSnapshotter(options: mapSnapshotOptions)
         
