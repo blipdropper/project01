@@ -66,6 +66,9 @@ public struct blipData {
     var fileCount = 0
     var arrayPosition = Int()
     var mode = ""
+    var blip_init_source = ""
+    var icon_file_id = ""
+    var icon_file_type = ""
 }
 public struct blipFile {
     var file_id = ""
@@ -187,12 +190,15 @@ func returnBlipPostFromDB (dbRow: PFObject)-> blipData {
     blipData.blip_location.administrativeArea = dbRow["administrativeArea"] as? String ?? ""
     blipData.blip_location.postalCode = dbRow["postalCode"] as? String ?? ""
     blipData.blip_location.country = dbRow["country"] as? String ?? ""
-
     blipData.blip_note = dbRow["blip_msg"] as? String ?? ""
+    blipData.icon_file_id = dbRow["icon_file_id"] as? String ?? ""
+    blipData.icon_file_type = dbRow["icon_file_type"] as? String ?? ""
+    blipData.blip_init_source = dbRow["blip_init_source"] as? String ?? ""
     blipData.imageFile = dbRow["imageFile"] as? PFFileObject
     blipData.imageThumbFile = dbRow["imageThumbFile"] as? PFFileObject
     blipData.blip_lat = dbRow["latitude"] as? Double
     blipData.blip_lon = dbRow["longitude"] as? Double
+    
     if dbRow["yelp_id"] != nil {
         blipData.blip_yelp_id =  dbRow["yelp_id"] as! String }
     if dbRow["here_id"] != nil {
@@ -207,46 +213,7 @@ func returnBlipPostFromDB (dbRow: PFObject)-> blipData {
         blipData.place_addr = dbRow["place_addr"] as! String }
     if dbRow["place_url"] != nil {
         blipData.place_url = dbRow["place_url"] as! String }
-
-    /* ORIGINAL CODE... can delete once know new way not an issue
-    if let blipdate = post["blip_date"] as? Date {
-        curBlip.blip_dt_txt = returnStringDate(date: blipdate, dateFormat: "")
-        curBlip.blip_dt = blipdate
-    } else {
-        print("Error setting date string")
-    }
-    curBlip.create_dt = curBlip.blip_dt
-    curBlip.create_dt_txt = curBlip.blip_dt_txt
-    curBlip.blip_addr = post["blip_address"] as! String
-    curBlip.blip_location.subThoroughfare = post["subThoroughfare"] as! String
-    curBlip.blip_location.thoroughfare = post["thoroughfare"] as! String
-    curBlip.blip_location.subLocality = post["subLocality"] as! String
-    curBlip.blip_location.locality = post["locality"] as! String
-    curBlip.blip_location.subAdministrativeArea = post["subAdministrativeArea"] as! String
-    curBlip.blip_location.administrativeArea = post["administrativeArea"] as! String
-    curBlip.blip_location.postalCode = post["postalCode"] as! String
-    curBlip.blip_location.country = post["country"] as! String
-
-    curBlip.blip_note = post["blip_msg"] as! String
-    curBlip.blip_id = (post.objectId!)
-    curBlip.imageFile = post["imageFile"] as? PFFileObject
-    curBlip.imageThumbFile = post["imageThumbFile"] as? PFFileObject
-    curBlip.blip_lat = post["latitude"] as? Double
-    curBlip.blip_lon = post["longitude"] as? Double
-    if post["yelp_id"] != nil {
-        curBlip.blip_yelp_id =  post["yelp_id"] as! String }
-    if post["here_id"] != nil {
-        curBlip.blip_here_id =  post["here_id"] as! String }
-    if post["place_name"] != nil {
-        curBlip.place_name = post["place_name"] as! String }
-    if post["place_lat"] != nil {
-        curBlip.place_lat  = post["place_lat"] as? Double }
-    if post["place_addr"] != nil {
-        curBlip.place_addr = post["place_addr"] as! String }
-    if post["place_url"] != nil {
-        curBlip.place_url = post["place_url"] as! String }
-    */
-
+    
     return blipData
 }
 func returnBlipFileFromDB (dbRow: PFObject)-> blipFile {
@@ -268,9 +235,8 @@ func returnBlipFileFromDB (dbRow: PFObject)-> blipFile {
         if dbRow["imageThumbFile"] != nil {
             let tempThumbFile = dbRow["imageThumbFile"] as! PFFileObject
             blipFile.imageThumbFile = tempThumbFile
-            }
         }
-
+    }
     return blipFile
 }
 func saveBlipDataToDb (blip: blipData) {
@@ -334,33 +300,42 @@ func returnLocationFromPlaceMark (pm: CLPlacemark)-> blipLocation {
     
     if pmLocation.subThoroughfare != "" {
         pmLocation.strAddress += pmLocation.subThoroughfare + addrDelim
-    }//Number
+    }//Number = subThoroughfare
     if pmLocation.thoroughfare != "" {
         pmLocation.strAddress += pmLocation.thoroughfare + addrDelim
-    }//Street
+    }//Street = thoroughfare
     if pmLocation.locality != "" {
         pmLocation.strAddress += pmLocation.locality + addrDelim
-    }//City
+    }//City = locality
     //if pmLocation.subLocality != "" {
     //    pmLocation.strAddress += pmLocation.subLocality + addrDelim
     //}
-    //Neighborhood
+    //Neighborhood = subLocality
     //if pmLocation.subAdministrativeArea != "" {
     //    pmLocation.strAddress += pmLocation.subAdministrativeArea + addrDelim
     //}
-    //County
+    //County = subAdministrativeArea
     if pmLocation.administrativeArea != "" {
         pmLocation.strAddress += pmLocation.administrativeArea + addrDelim
-    }//State
+    }//State = administrativeArea
     if pmLocation.postalCode != "" {
         pmLocation.strAddress += pmLocation.postalCode + addrDelim
-    }// Zip
+    }// Zip = postalCode
     //if pmLocation.country != "" {
     //    pmLocation.strAddress += pmLocation.country + addrDelim
     //}
-    // Country
+    // Country = country
 
     return pmLocation
+}
+func makeBlipFileBlipIcon (newIconFile: blipFile){
+    curBlip.icon_file_id = newIconFile.file_id
+    curBlip.imageFile = newIconFile.imageFile
+    curBlip.imageThumbFile = newIconFile.imageThumbFile
+    curBlip.imageUIImage = newIconFile.imageUIImage
+    curBlip.icon_file_type = newIconFile.file_type
+    
+    // get the location data in the  background
 }
 
 /* MEMORY QUEUES

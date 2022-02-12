@@ -578,10 +578,10 @@
                                 </constraints>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="fileCell" id="gek-3O-qzw" customClass="BlipPlaceTVCell" customModule="Blip_dropper" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="44.666666030883789" width="375" height="30.666666030883789"/>
+                                        <rect key="frame" x="0.0" y="44.666666030883789" width="375" height="31.333333969116211"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="gek-3O-qzw" id="Jf9-1Y-HRf">
-                                            <rect key="frame" x="0.0" y="0.0" width="375" height="30.666666030883789"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="375" height="31.333333969116211"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
                                                 <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nTr-E6-vBe">
@@ -596,7 +596,7 @@
                                                     </connections>
                                                 </button>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="23p-cP-5S6">
-                                                    <rect key="frame" x="16" y="5" width="290" height="20.666666666666668"/>
+                                                    <rect key="frame" x="16" y="5" width="290" height="21.333333333333332"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
@@ -621,7 +621,8 @@
                                 </connections>
                             </tableView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="fFX-bm-m9W">
-                                <rect key="frame" x="311" y="39" width="48" height="30"/>
+                                <rect key="frame" x="317" y="39" width="42" height="30"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="13"/>
                                 <state key="normal" title="Cancel"/>
                                 <connections>
                                     <action selector="cancelPicker:" destination="DaR-73-miZ" eventType="touchUpInside" id="VmI-2v-AUp"/>
@@ -661,19 +662,30 @@
                                     <action selector="searchArea:" destination="DaR-73-miZ" eventType="touchUpInside" id="5ek-d4-LUk"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="San Francisco  ^" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="AMY-Ky-8BU">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="San Francisco  ^" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="AMY-Ky-8BU">
                                 <rect key="frame" x="123" y="72" width="124" height="21"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Place of Interest for Blip" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="wUg-Ny-rYr">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Place of Interest for Blip For a really nice restaurnt" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumFontSize="9" translatesAutoresizingMaskIntoConstraints="NO" id="wUg-Ny-rYr">
                                 <rect key="frame" x="84" y="44" width="206" height="20"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="10"/>
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="9wb-KL-nxe">
+                                <rect key="frame" x="0.0" y="40" width="78" height="29"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="gray" title="clear">
+                                    <fontDescription key="titleFontDescription" type="system" pointSize="0.0"/>
+                                </buttonConfiguration>
+                                <connections>
+                                    <action selector="clearPlaceOfInterest:" destination="DaR-73-miZ" eventType="touchUpInside" id="oI0-9o-hni"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Xie-by-8KR"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -694,11 +706,18 @@
                             <constraint firstAttribute="bottom" secondItem="wcx-1f-qVe" secondAttribute="bottom" id="ujh-yL-wX7"/>
                             <constraint firstItem="Vo1-Sg-y1k" firstAttribute="leading" secondItem="Xie-by-8KR" secondAttribute="leading" constant="72" id="y9h-Iy-XKr"/>
                         </constraints>
+                        <variation key="default">
+                            <mask key="subviews">
+                                <exclude reference="AMY-Ky-8BU"/>
+                            </mask>
+                        </variation>
                     </view>
                     <navigationItem key="navigationItem" id="IZs-DS-deY"/>
                     <connections>
                         <outlet property="PlaceTableView" destination="wcx-1f-qVe" id="efN-Te-yb1"/>
+                        <outlet property="clearButton" destination="9wb-KL-nxe" id="PdQ-vx-XYm"/>
                         <outlet property="map" destination="gDk-e6-w3r" id="vfr-2G-qmO"/>
+                        <outlet property="placeOfInterest" destination="wUg-Ny-rYr" id="IkW-Ep-sjz"/>
                         <outlet property="searchAreaButton" destination="Oa8-Wr-pbE" id="fU6-IH-XhO"/>
                         <outlet property="searchBox" destination="xBZ-Ey-8Fb" id="was-Xj-Uxs"/>
                         <outlet property="topLabel" destination="Vo1-Sg-y1k" id="DCY-5V-sVt"/>

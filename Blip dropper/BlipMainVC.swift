@@ -20,21 +20,22 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     // IBOUTLETS, ACTIONS, and variables
     private let imagePicker = UIImagePickerController()
     var blipObjectid = ""
-    var choosenImage: UIImage?
     var mapImage: UIImage?
+    var location = blipLocation()
+    var snapshotRan = "initialized"
+    var photoMapImage: UIImage?
+    var photoLocation = blipLocation()
+    var photoSnapshotRan = "initialized"
     var locationManager = CLLocationManager()
     var currLocation = CLLocation()
     var currDateStamp = Date()
-    var location = blipLocation()
     var blipFiles = [blipFile]()
     var locationSet = false
-    var snapshotRan = "initialized"
     var newBlipMode = false
     var PhotoMode = false
     var cameraPhotoSwitch = ""
     var txtIsPlaceHolder = false
     var txtIsEditing = false
-    var initialActionComplete = false
     let addrDelim = " "
     var placeHolderText = "Enter some details about your Blip!"
     var blipMode = "photo"
@@ -101,10 +102,13 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     blip!["imageThumbFile"] = curBlip.imageThumbFile
                 }
                 blip!["blip_msg"] = curBlip.blip_note
+                blip!["icon_file_id"] = curBlip.icon_file_id
+                blip!["icon_file_type"] = curBlip.icon_file_type
+                blip!["blip_init_source"] = curBlip.blip_init_source
                 blip!["blip_date"] = curBlip.blip_dt
                 // HOW ARE YOU GOING TO GET THE TZ SECONDS FROM EXIF?  HOW IS THIS USED
                 //blip!["TZOffset_seconds"] = curBlip.blip_tz_secs
-                blip!["blip_address"] = curBlip.blip_addr
+                blip!["blip_address"] = curBlip.blip_location.strAddress
                 blip!["subThoroughfare"] = curBlip.blip_location.subThoroughfare
                 blip!["thoroughfare"] = curBlip.blip_location.thoroughfare
                 blip!["subLocality"] = curBlip.blip_location.subLocality
@@ -129,34 +133,16 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 print(error?.localizedDescription ?? "")
             }
         }
-        loadedBlips[curBlip.arrayPosition].blip_note = curBlip.blip_note
-        loadedBlips[curBlip.arrayPosition].imageFile = curBlip.imageFile
-        loadedBlips[curBlip.arrayPosition].imageThumbFile = curBlip.imageThumbFile
-        loadedBlips[curBlip.arrayPosition].imageUIImage = curBlip.imageUIImage
-        loadedBlips[curBlip.arrayPosition].blip_dt = curBlip.blip_dt
-        //loadedBlips[curBlip.arrayPosition].blip_tz_secs = curBlip.blip_tz_secs
-        loadedBlips[curBlip.arrayPosition].blip_dt_txt = curBlip.blip_dt_txt
-        loadedBlips[curBlip.arrayPosition].blip_lat = curBlip.blip_lat
-        loadedBlips[curBlip.arrayPosition].blip_lon = curBlip.blip_lon
-        loadedBlips[curBlip.arrayPosition].blip_addr = curBlip.blip_addr
-        loadedBlips[curBlip.arrayPosition].blip_location = curBlip.blip_location
-        loadedBlips[curBlip.arrayPosition].blip_yelp_id = curBlip.blip_yelp_id
-        loadedBlips[curBlip.arrayPosition].blip_here_id = curBlip.blip_here_id
-        loadedBlips[curBlip.arrayPosition].place_name = curBlip.place_name
-        loadedBlips[curBlip.arrayPosition].place_lat = curBlip.place_lat
-        loadedBlips[curBlip.arrayPosition].place_lon = curBlip.place_lon
-        loadedBlips[curBlip.arrayPosition].place_addr = curBlip.place_addr
-        loadedBlips[curBlip.arrayPosition].place_url = curBlip.place_url
-        loadedBlips[curBlip.arrayPosition].place  = curBlip.place
-
-        //found nil wile unwrapping an optional after hitting place off of new no pic blip
-        print(curBlip.blip_dt)
+        loadedBlips[curBlip.arrayPosition] = curBlip
+        //found nil wile unwrapping an optional after hitting place off of new no pic blip?
+        print(curBlip.blip_dt ?? "")
         loadedBlips.sort(by: { $0.blip_dt?.compare(($1.blip_dt)!) == .orderedDescending }) // newest to oldest
     }
 
     // ----------------------------------------
     // POST FILE
-    func postLocationFile(mapImage: UIImage) {
+    func postLocationFile(mapImage: UIImage, mapType: String) {
+        var newBlipFile = blipFile()
         // Check Blip id set
         if curBlip.blip_id == "" {
             print("blip_id is nil pal")
@@ -165,8 +151,12 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         } else {
             print("blip_id = \(curBlip.blip_id) for file")
         }
-        var newBlipFile = blipFile()
-        newBlipFile.file_type = "mapImage"
+        // Differentiate photo derived maps from locaton ones
+        if mapType == "photo" {
+            newBlipFile.file_type = "mapImageFromPhoto"
+        } else {
+            newBlipFile.file_type = "mapImage"
+        }
         newBlipFile.blip_id = curBlip.blip_id
         newBlipFile.imageUIImage = mapImage
 
@@ -176,11 +166,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 newBlipFile.imageFile = blipFile
                 newBlipFile.imageThumbFile = blipFile
                 // SET curBlip images if this is first file
-                if curBlip.fileCount == 0 {
-                    curBlip.imageFile = blipFile
-                    curBlip.imageThumbFile = blipFile
-                    curBlip.imageUIImage = newBlipFile.imageUIImage
-                }
             }
             print("done image encode to PFFile")
         }
@@ -193,150 +178,128 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         blipFileRow["create_dt"] = curBlip.create_dt
         blipFileRow.saveInBackground(block: { (success, error) in
             if success {
-                print("Save in bg MapImage File worked")
+                if let newFileObjectId = blipFileRow.objectId {
+                    newBlipFile.file_id = newFileObjectId
+                    if curBlip.fileCount == 0 {
+                        makeBlipFileBlipIcon(newIconFile: newBlipFile)
+                    }
+                }
             } else {
                 print(error?.localizedDescription ?? "")
             }
+            // Append to Blip File array
+            self.blipFiles.insert(newBlipFile, at: 0)
+            curBlip.fileCount = self.blipFiles.count
+            print("start collection reload filecount:\(curBlip.fileCount)")
+            self.blipFileCollectionView.reloadData()
         })
-        // Append to Blip File array
-        blipFiles.append(newBlipFile)
-        curBlip.fileCount = blipFiles.count
-        print("start collection reload filecount:\(curBlip.fileCount)")
-        self.blipFileCollectionView.reloadData()
-        print("done collection reload")
     }
-    func postFile(fileType: String) {
-    // Image... get lat/lon/date
+    func postFile(chosenImage: UIImage, fileType: String) {
         var exifDateOk = false
         var exifPlaceOk = false
-        if curBlip.blip_id == "" {
-            print("blip_id is nil pal")
-        } else {
-            print("blip_id = \(curBlip.blip_id) for file")
-        }
+        let dateFormatter = DateFormatter()
+        var newBlipFile = blipFile()
+        let blipFileRow = PFObject(className: "BlipFile")
 
         // Populate Blip File Struct
-        var newBlipFile = blipFile()
-        newBlipFile.file_type = cameraPhotoSwitch
-        newBlipFile.imageUIImage = choosenImage
-        newBlipFile.file_lat = (self.exif?.gps?.latitude)
-        newBlipFile.file_lon = (self.exif?.gps?.longitude)
         newBlipFile.blip_id = curBlip.blip_id
+        newBlipFile.file_type = cameraPhotoSwitch
+        newBlipFile.imageUIImage = chosenImage
         newBlipFile.create_dt = Date()
         newBlipFile.create_dt_txt = time2String(time: newBlipFile.create_dt!)
-        // Encode the image
-        if let imageData = UIImageJPEGRepresentation(self.choosenImage!, 0.1) {
+        // Get image file
+        if let imageData = UIImageJPEGRepresentation(chosenImage, 0.1) {
             print("start image encode to PFFile")
             if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
                 newBlipFile.imageFile = blipFile
                 newBlipFile.imageThumbFile = blipFile
-                // SET curBlip images if this is first file
-                if curBlip.fileCount <= 1 {
-                    curBlip.imageFile = blipFile
-                    curBlip.imageUIImage = newBlipFile.imageUIImage
-                    curBlip.imageThumbFile = blipFile
-                }
             }
-            print("done image encode to PFFile")
         }
-        // Set the Date from the image EXIF if not nil dt, ts, and tz
-        if self.exif?.gps?.dateStamp != nil && self.exif?.gps?.timeStamp != nil && self.exif?.gps?.timeZoneAbbreviation != nil {
-            let fullDate = "\(self.exif?.gps?.dateStamp ?? "") \(self.exif?.gps?.timeStamp ?? "") \(self.exif?.gps?.timeZoneAbbreviation ?? "")"
-            print("full Date is: \(fullDate)")
-            let dateFormatter = DateFormatter()
+        // Get file create date
+        if let fileCreationDate = exif?.assetCreateDate {
+            exifDateOk = true
+            newBlipFile.file_dt = fileCreationDate
+            newBlipFile.file_dt_txt  = time2String(time: newBlipFile.file_dt!)
+        } else if let fileDateStamp = self.exif?.gps?.dateStamp, let fileTz = self.exif?.gps?.timeZoneAbbreviation {
             dateFormatter.dateFormat = "yyyy:MM:dd HH:mm:ss zzz"
-            let dateFromString = dateFormatter.date(from: fullDate)
-            newBlipFile.file_dt = dateFromString
-            if newBlipFile.file_dt != nil {
+            if let dateFromString = dateFormatter.date(from: "\(fileDateStamp) \(fileTz)") {
                 exifDateOk = true
+                newBlipFile.file_dt = dateFromString
                 newBlipFile.file_dt_txt  = time2String(time: newBlipFile.file_dt!)
             }
-        } else {
-            print("The dateStamp didn't set")
+        } else if let fileDateStamp = self.exif?.timeOrigional, let fileTz = self.exif?.gps?.timeZoneAbbreviation {
+            dateFormatter.dateFormat = "yyyy:MM:dd HH:mm:ss zzz"
+            if let dateFromString = dateFormatter.date(from: "\(fileDateStamp) \(fileTz)") {
+                exifDateOk = true
+                newBlipFile.file_dt = dateFromString
+                newBlipFile.file_dt_txt  = time2String(time: newBlipFile.file_dt!)
+            }
         }
-        // Set Reverse Geo Code and write to server after
-        if let lat: CLLocationDegrees = newBlipFile.file_lat, let lon: CLLocationDegrees = newBlipFile.file_lon {
+        // Get file location
+        if let lat: CLLocationDegrees = self.exif?.assetLocation?.coordinate.latitude, let lon: CLLocationDegrees = self.exif?.assetLocation?.coordinate.longitude {
+            newBlipFile.file_lat = lat
+            newBlipFile.file_lon = lon
             exifPlaceOk = true
-            let LatLonLocation = CLLocation(latitude: lat, longitude: lon)
-            CLGeocoder().reverseGeocodeLocation(LatLonLocation) { (placemarks, error) in
-                if error != nil {
-                    print(error!)
-                } else {
-                    if let placemark = placemarks?[0] {
-                        self.location = returnLocationFromPlaceMark(pm: placemark)
-                        newBlipFile.file_addr = self.location.strAddress
-                        print(self.location.strAddress)
-                        
-                        // Save Blip Row WITH Metadata
-                        let blipFileRow = PFObject(className: "BlipFile")
-                        blipFileRow["blip_id"] = newBlipFile.blip_id
-                        blipFileRow["imageFile"] = newBlipFile.imageFile
-                        blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
-                        blipFileRow["create_dt"] = newBlipFile.create_dt
-                        blipFileRow["latitude"] = newBlipFile.file_lat
-                        blipFileRow["longitude"] = newBlipFile.file_lon
-                        blipFileRow["file_addr"] = newBlipFile.file_addr
-                        blipFileRow["file_type"] = newBlipFile.file_type
+        } else if let lat: CLLocationDegrees = self.exif?.gps?.latitude, let lon: CLLocationDegrees = self.exif?.gps?.longitude {
+            newBlipFile.file_lat = lat
+            newBlipFile.file_lon = lon
+            exifPlaceOk = true
+        }
+        // Get Image file Object
+        if let imageData = UIImageJPEGRepresentation(chosenImage, 0.1) {
+            if let blipFile = PFFileObject(name: "image.jpg", data: imageData as Data) {
+                newBlipFile.imageFile = blipFile
+                newBlipFile.imageThumbFile = blipFile
+            }
+        }
+        blipFileRow["blip_id"] = newBlipFile.blip_id
+        blipFileRow["imageFile"] = newBlipFile.imageFile
+        blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
+        blipFileRow["create_dt"] = newBlipFile.create_dt
+        blipFileRow["file_addr"] = newBlipFile.file_addr
+        blipFileRow["file_type"] = newBlipFile.file_type
+        if exifPlaceOk {
+            blipFileRow["latitude"] = newBlipFile.file_lat
+            blipFileRow["longitude"] = newBlipFile.file_lon
+        }
+        if exifDateOk {
+            blipFileRow["file_dt"] = newBlipFile.file_dt
+            blipFileRow["file_dt_txt"] = newBlipFile.file_dt_txt
+        }
+
+        blipFileRow.saveInBackground(block: { (success, error) in
+            if success {
+                // SET curBlip images if this is first file... if its photoMode then set the blip as the file
+                if let newFileObjectId = blipFileRow.objectId {
+                    newBlipFile.file_id = newFileObjectId
+                }
+                if curBlip.fileCount <= 1 {
+                    makeBlipFileBlipIcon(newIconFile: newBlipFile)
+                    if self.PhotoMode {
                         if exifDateOk {
-                            blipFileRow["file_dt"] = newBlipFile.file_dt
-                            blipFileRow["file_dt_txt"] = newBlipFile.file_dt_txt
+                            curBlip.blip_dt = newBlipFile.file_dt
+                            curBlip.blip_dt_txt  = newBlipFile.file_dt_txt
+                            self.blipDate.setTitle(newBlipFile.file_dt_txt, for: [])
                         }
-                        // Set the PlaceTime for Blip if first PhotoMode image initial PostFile completed which declares blip
-                        if self.PhotoMode && !self.initialActionComplete {
-                            curBlip.blip_location = self.location
+                        if exifPlaceOk {
+                            // Ask the user if they want to use the photo or the date?
                             curBlip.blip_lat = newBlipFile.file_lat
                             curBlip.blip_lon = newBlipFile.file_lon
-                            curBlip.blip_addr = newBlipFile.file_addr
-                            self.blipPlace.setTitle(returnLocationString(location: curBlip.blip_location), for: [])
-
-                            if exifDateOk {
-                                self.blipDate.setTitle(newBlipFile.file_dt_txt, for: [])
-                                curBlip.blip_dt = newBlipFile.file_dt
-                                curBlip.blip_dt_txt  = newBlipFile.file_dt_txt
-                            }
-                            // change the blip placeTime
-                            // move the blip from position 0 in the array to a sort of where it should be
+                            self.setBlipLocationImage(latitude: curBlip.blip_lat!, longitude: curBlip.blip_lon!, mode: "photoMap")
+                        } else if let image = self.mapImage { // If you didn't get a photo location use the location one
+                            self.postLocationFile(mapImage: image, mapType: "location" )
                         }
-                        blipFileRow.saveInBackground(block: { (success, error) in
-                            if success {
-                                print("Save in bg worked")
-                            } else {
-                                print(error?.localizedDescription ?? "")
-                            }
-                        })
-                        self.initialActionComplete = true
+                        self.PhotoMode = false
                     }
                 }
+            } else {
+                print(error?.localizedDescription ?? "")
             }
-        } else {
-            // Save Blip Row NO location metadata
-            print("The Lat lon didn't read")
-            let blipFileRow = PFObject(className: "BlipFile")
-            blipFileRow["blip_id"] = newBlipFile.blip_id
-            blipFileRow["imageFile"] = newBlipFile.imageFile
-            blipFileRow["imageThumbFile"] = newBlipFile.imageThumbFile
-            blipFileRow["create_dt"] = newBlipFile.create_dt
-            blipFileRow.saveInBackground(block: { (success, error) in
-                if success {
-                    print("Save in bg no metadata worked")
-                } else {
-                    print(error?.localizedDescription ?? "")
-                }
-            })
-            
-            if self.PhotoMode && !self.initialActionComplete{
-                print("Set curBlip to placetime if this was first post")
-            }
-
-            initialActionComplete = true
-        }
-        
-        // Append to Blip File array
-        blipFiles.append(newBlipFile)
-        curBlip.fileCount = blipFiles.count
-        print("start collection reload filecount:\(curBlip.fileCount)")
-        self.blipFileCollectionView.reloadData()
-        print("done collection reload")
+            self.blipFiles.append(newBlipFile)
+            curBlip.fileCount = self.blipFiles.count
+            self.blipFileCollectionView.reloadData()
+        })
+        exif = nil
     }
     func actionOpenPhoto (_ sender: UIButton) {
         let alertController = UIAlertController.init(title: "Choose Photo", message: "Choose Photo From", preferredStyle: .actionSheet)
@@ -423,6 +386,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     //-- For Photos
     private func checkPhotoLibraryPermission() {
+        // This is how to check which version of iOS you are running
         if #available(iOS 14, *) {
              print("running on ios 14 or beyond")
         } else {
@@ -489,81 +453,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     
     // ----------------------------------------
     // LOCATION MANAGER for initial Spot
-    func setBlipLocationImage(latitude: Double, longitude: Double, mode: String) {
-        print("start snapshotter")
-        snapshotRan = "started"
-
-        let mapSnapshotOptions = MKMapSnapshotOptions()
-        // Set the region of the map that is rendered.
-        let location = CLLocationCoordinate2DMake(latitude, longitude)
-        let region = MKCoordinateRegionMakeWithDistance(location, 1000, 1000)
-        mapSnapshotOptions.region = region
-        // Set the size of the image output.
-        mapSnapshotOptions.size = imageView.frame.size
-        // Show buildings and Points of Interest on the snapshot
-        mapSnapshotOptions.showsBuildings = true
-        mapSnapshotOptions.pointOfInterestFilter = MKPointOfInterestFilter(including: [.bank, .atm, .restaurant, .amusementPark, .bakery])
-        
-        let snapShotter = MKMapSnapshotter(options: mapSnapshotOptions)
-        
-        snapShotter.start { (snapshot, error) in
-            if error == nil {
-                print("snapshotter thinks no error")
-                if let image = snapshot?.image {
-                    var returnImage = image
-                    var centerPointImage = UIImage()
-                    var centerPointWidth = 0.0
-                    var centerPointHeight = 0.0
-                    let scaleFactor = 1.0
-                    
-                    if let mapCenterImage = UIImage(named: "bPurpleAnnotation") {
-                        centerPointImage = mapCenterImage
-                        centerPointWidth = centerPointImage.size.width * scaleFactor
-                        centerPointHeight = centerPointImage.size.height * scaleFactor
-                    }
-                    UIGraphicsBeginImageContext(image.size)
-                    let areaSize = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height)
-                    let centerPointAreaSize = CGRect(x: image.size.width / 2 - centerPointWidth / 2, y: image.size.height / 2 - centerPointHeight / 2, width: centerPointWidth, height: centerPointHeight)
-                    image.draw(in: areaSize)
-                    centerPointImage.draw(in: centerPointAreaSize, blendMode: .normal, alpha: 0.4)
-                    if let finalImage = UIGraphicsGetImageFromCurrentImageContext() {
-                        returnImage = finalImage
-                    }
-                    UIGraphicsEndImageContext()
-                    /*
-                    var annotation = MKPointAnnotation()
-                    annotation.coordinate = coordinates[0]
-                    annotation.title = "Your Title"
-
-                    let annotationView = CustomAnnotationView(annotation: annotation, reuseIdentifier: "annotation")
-                    let pinImage = annotationView.image
-
-                    UIGraphicsBeginImageContextWithOptions(image.size, true, image.scale);
-
-                    image.drawAtPoint(CGPointMake(0, 0)) //map
-
-                    // pinImage!.drawAtPoint(snapshot.pointForCoordinate(coordinates[0]))
-                    annotationView.drawViewHierarchyInRect(CGRectMake(snapshot.pointForCoordinate(coordinates[0]).x, snapshot.pointForCoordinate(coordinates[0]).y, annotationView.frame.size.width, annotationView.frame.size.height), afterScreenUpdates: true)
-                    let finalImage = UIGraphicsGetImageFromCurrentImageContext()
-                    UIGraphicsEndImageContext()
-                    */
-                    self.mapImage = returnImage
-                    self.imageView.image = returnImage
-                    self.snapshotRan = "done"
-                    print("snapshotter thinks image set")
-                    if mode == "postfile" {
-                        self.postLocationFile(mapImage: returnImage)
-                    }
-
-
-                } else {
-                    print("snapshotter didn't get image for some reason?")
-                }
-            } else {
-                print(error ?? "")
-            }
-        }
-    }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let userLocation: CLLocation = locations[0]
         currLocation = userLocation
@@ -590,18 +479,15 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     self.location.strSpeed = String(userLocation.speed)
                     self.location.strAltitude = String(userLocation.altitude)
                     self.location.strLatLon = self.location.strLatitude + ", " + self.location.strLongitude
-
                     print(self.location.strAddress)
-                    if !self.locationSet {
+
+                    if self.locationSet {
+                        print("location already set")
+                    } else {
                         print("start posting")
-                        print(self.location.lat)
-                        print(self.location.lon)
-                        
                         self.postInitialBlip()
                         // if snapshot done then post image as file because you have the image already
                         self.locationSet = true
-                    } else {
-                        print("location already set")
                     }
                 }
             }
@@ -609,10 +495,57 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         // Stop updating location to save battery
         locationManager.stopUpdatingLocation()
     }
+    func setBlipLocationImage(latitude: Double, longitude: Double, mode: String) {
+        if mode == "photoMap" {
+            photoSnapshotRan = "started"
+        } else {
+            snapshotRan = "started"
+        }
+
+        let mapSnapshotOptions = MKMapSnapshotOptions()
+        let location = CLLocationCoordinate2DMake(latitude, longitude)
+        let region = MKCoordinateRegionMakeWithDistance(location, 1000, 1000)
+        mapSnapshotOptions.region = region
+        mapSnapshotOptions.size = imageView.frame.size
+        mapSnapshotOptions.showsBuildings = true
+        mapSnapshotOptions.pointOfInterestFilter = MKPointOfInterestFilter(including: [.bank, .atm, .restaurant, .amusementPark, .bakery])
+        let snapShotter = MKMapSnapshotter(options: mapSnapshotOptions)
+        
+        snapShotter.start { (snapshot, error) in
+            if let image = snapshot?.image {
+                if mode == "photoMap" {
+                    self.photoMapImage = image
+                    let loc: CLLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+                    let ceo: CLGeocoder = CLGeocoder()
+                    ceo.reverseGeocodeLocation(loc, completionHandler: {(placemarks, error) in
+                        if let pm = placemarks?[0] {
+                            self.photoLocation = returnLocationFromPlaceMark(pm: pm)
+                            curBlip.blip_location = self.photoLocation
+                            self.blipPlace.setTitle(returnLocationString(location: curBlip.blip_location), for: [])
+                        } else {
+                            print(error?.localizedDescription ?? "Error is Nil?")
+                        }
+                        self.photoSnapshotRan = "done"
+                        self.postLocationFile(mapImage: image, mapType: "photo" )
+                   })
+                } else {
+                    self.mapImage = image
+                    self.imageView.image = image
+                    self.snapshotRan = "done"
+                    if mode == "postfile", !self.PhotoMode { // don't post if its photo mode
+                        self.postLocationFile(mapImage: image, mapType: "location" )
+                    }
+                }
+            } else {
+                print("Snapshotter didn't get image for some reason? \(error?.localizedDescription ?? "Error is Nil?")")
+            }
+        }
+    }
     func postInitialBlip() {
         var secondsFromGMT: Int { return TimeZone.current.secondsFromGMT() }
-
+        
         curBlip.blip_status = "new"
+        if PhotoMode {curBlip.blip_init_source = "photo"} else {curBlip.blip_init_source = "map"}
         curBlip.user_id = PFUser.current()?.objectId ?? ""
         curBlip.blip_dt = Date()
         curBlip.blip_dt_txt = time2String(time: curBlip.blip_dt!)
@@ -643,7 +576,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         post["administrativeArea"] = curBlip.blip_location.administrativeArea
         post["postalCode"] = curBlip.blip_location.postalCode
         post["country"] = curBlip.blip_location.country
-        post["blip_address"] = curBlip.blip_addr
+        post["blip_address"] = curBlip.blip_location.strAddress
         post["latitude"] = curBlip.blip_lat
         post["longitude"] = curBlip.blip_lon
         post["blip_status"] = curBlip.blip_status
@@ -654,9 +587,10 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 print("Blip instantiated, location set = \(self.locationSet)")
                 curBlip.blip_id = post.objectId!
                 loadedBlips.insert(curBlip, at: 0)
+                
                 if self.snapshotRan == "done" {
                     if let image = self.mapImage {
-                        self.postLocationFile(mapImage: image)
+                        self.postLocationFile(mapImage: image, mapType: "location" )
                     }
                 } else {
                     // if snapshot didn't finish then run it again but this time do the post at the end
@@ -666,6 +600,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 }
             } else {
                 print("\(error?.localizedDescription ?? "")")
+                showAlertFromAppDelegate(title: "Connection Error", message: error?.localizedDescription ?? "Error retrieving error message")
             }
         }
         
@@ -674,7 +609,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         
         if PhotoMode {
             checkPhotoLibraryPermission()
-            print("Why didn't this work \(PhotoMode)")
         }
     }
     // ----------------------------------------
@@ -692,6 +626,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell:BlipMainCell = collectionView.dequeueReusableCell(withReuseIdentifier: "fileCell", for: indexPath) as! BlipMainCell
+        cell.delegateToMain = self
         cell.setBlipCell(file: blipFiles[indexPath.row])
         return cell
     }
@@ -713,7 +648,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         let urlString = "http://maps.apple.com/?q=\(appleMapPin)"
         print("URL String: \(urlString)")
 
-        if let url = URL(string: urlString), selectedCell.curBlipFile.file_type == "mapImage" {
+        if let url = URL(string: urlString), (selectedCell.curBlipFile.file_type == "mapImage" || selectedCell.curBlipFile.file_type == "mapImageFromPhoto") {
             if UIApplication.shared.canOpenURL(url) {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
                 //If you want handle the completion block than
@@ -727,9 +662,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     // ---------------------------------------- 
     // VIEW DID LOAD
     override func viewDidAppear(_ animated: Bool) {
-        print("View Did Apear says \(curBlip.place_name)")
-        // Need to figire out that place information updated so you can refresh the cell
-        // blipFileCollectionView.reloadData()
+        blipFileCollectionView.reloadData()
 
         if curBlip.mode == "newPlace", let newBlipPlace = curBlip.place {
             print("Add blipFile for: \(newBlipPlace.name)  \(newBlipPlace.yelp?.imageURL ?? "") " )
@@ -754,7 +687,27 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     override func viewDidLoad() {
         super.viewDidLoad()
+        setUpView()
         print("View Did Load says \(curBlip.place_name)")
+        print("Photo mode: \(PhotoMode)")
+
+        if curBlip.blip_id  == "" {
+            newBlipMode = true
+            print("New Blip Mode")
+            locationManager.delegate = self
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.requestWhenInUseAuthorization()
+            locationManager.startUpdatingLocation()
+            // postInitialBlip called from location manager since we need to wait for lat/lon/geo code
+            checkPlaceHolderText()
+        } else {
+            newBlipMode = false
+            print("Update Blip Mode: blip \(curBlip.blip_id)")
+            updateBlipMode()
+            blipFileCollectionView.reloadData()
+        }
+    }
+    func setUpView() {
         scroller.delegate = self
         scroller.maximumZoomScale = 1
         scroller.maximumZoomScale = 4
@@ -775,24 +728,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         blipFileCollectionView.delegate = self
         blipFileCollectionView.dataSource = self
         blipFileCollectionView.addGestureRecognizer(longTapGesture)
-
-        print("Photo mode: \(PhotoMode)")
-
-        if curBlip.blip_id  == "" {
-            newBlipMode = true
-            print("New Blip Mode")
-            locationManager.delegate = self
-            locationManager.desiredAccuracy = kCLLocationAccuracyBest
-            locationManager.requestWhenInUseAuthorization()
-            locationManager.startUpdatingLocation()
-            // postInitialBlip called from location manager since we need to wait for lat/lon/geo code
-            checkPlaceHolderText()
-        } else {
-            newBlipMode = false
-            print("Update Blip Mode: blip \(curBlip.blip_id)")
-            updateBlipMode()
-            blipFileCollectionView.reloadData()
-        }
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
@@ -850,26 +785,30 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
 
         // Delete the file if user confirms
         if let indexPath = blipFileCollectionView.indexPathForItem(at: p) {
-            let alert = UIAlertController(title: "Delete?", message: "You sure you want delete file?", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "Yes", style: .default, handler: { action in
-                // drop the file from the server
-                let file_id = self.blipFiles[indexPath.row].file_id
-                print(file_id)
-                self.blipFiles.remove(at: indexPath.row)
-                self.blipFileCollectionView.reloadData()
-                // Delete the blip from the server
-                let query = PFQuery(className: "BlipFile")
-                query.getObjectInBackground(withId: file_id) { (object, error) in
-                    if object != nil && error == nil {
-                        object?.deleteInBackground()
-                    } else {
-                        print("Something went wrong \(error?.localizedDescription ?? "")")
+            if blipFiles[indexPath.row].file_type == "mapImage" || blipFiles[indexPath.row].file_type == "mapImageFromPhoto", indexPath.row == 0 {
+                // what options does a map need, all else you can delete
+            } else {
+                let alert = UIAlertController(title: "Delete?", message: "You sure you want delete file?", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "Yes", style: .default, handler: { action in
+                    // drop the file from the server
+                    let file_id = self.blipFiles[indexPath.row].file_id
+                    print(file_id)
+                    self.blipFiles.remove(at: indexPath.row)
+                    self.blipFileCollectionView.reloadData()
+                    // Delete the blip from the server
+                    let query = PFQuery(className: "BlipFile")
+                    query.getObjectInBackground(withId: file_id) { (object, error) in
+                        if object != nil && error == nil {
+                            object?.deleteInBackground()
+                            makeBlipFileBlipIcon(newIconFile: self.blipFiles[indexPath.row-1])
+                        } else {
+                            print("Something went wrong \(error?.localizedDescription ?? "")")
+                        }
                     }
-                }
-
-            }))
-            alert.addAction(UIAlertAction(title: "No", style: .cancel, handler: nil))
-            self.present(alert, animated: true)
+                }))
+                alert.addAction(UIAlertAction(title: "No", style: .cancel, handler: nil))
+                self.present(alert, animated: true)
+            }
         } else {
             print("couldn't find index path")
         }
@@ -955,6 +894,9 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                     } else { print ("how does a file row have no file? for \(curFile.blip_id): file=\(curFile.file_id)")}
                 }
                 self.blipFileCollectionView.reloadData()
+                if curBlip.fileCount == 1 {
+                    print("1 file means that its the map, need to set a delegate back to here after the map image loads")
+                }
             }
         })
     }
@@ -966,8 +908,11 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             vc.blipFiles = blipFiles
         } else if segue.identifier == "showPlacePicker" {
             let vc = segue.destination as! BlipPlacePickerVC
-
-            if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
+            if let lat = curBlip.place_lat, let lon = curBlip.place_lon {
+                print("\(lat), \(lon)")
+                vc.getYelp(latitude:lat, longitude: lon)
+                vc.getHere(latitude:lat, longitude: lon)
+            } else if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
                 print("\(lat), \(lon)")
                 vc.getYelp(latitude:lat, longitude: lon)
                 vc.getHere(latitude:lat, longitude: lon)
@@ -987,46 +932,32 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
     public func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
         if let image = info[UIImagePickerControllerOriginalImage] as? UIImage {
             self.imageView.image = image
-            print("image view set")
-            self.choosenImage = image
             
             if imagePicker.sourceType == .photoLibrary {
-                print("Photo Library Mode")
-
                 if let asset = info[UIImagePickerControllerPHAsset] as? PHAsset {
-                    // Extract Exif Data from Phone
+                    print(asset.creationDate ?? "")
                     //let imageThumb  = self.getAssetThumbnail(asset: asset)
                     let options = PHContentEditingInputRequestOptions()
                     options.isNetworkAccessAllowed = true //download asset metadata from iCloud if needed
                     asset.requestContentEditingInput(with: options) { (contentEditingInput: PHContentEditingInput?, _) -> Void in
                         let fullImage = CIImage(contentsOf: contentEditingInput!.fullSizeImageURL!, options: nil)
-                        // EXTRACT EXIF PROPERTIES
+                        // Extract EXIF while you have UIImagePickerController info access
                         if let properties = fullImage?.properties {
-                            print("start exif on selected image")
                             self.exif = Exif(properties)
+                            self.exif?.assetCreateDate = asset.creationDate
+                            self.exif?.assetLocation = asset.location
                             // Check for valid placetime
-                            if self.exif?.gps?.dateStamp != nil && self.exif?.gps?.timeStamp != nil && self.exif?.gps?.timeZoneAbbreviation != nil {
-                                print("EXIF time set")
-                            } else {
-                                print("missing time on exif")
-                            }
-                            if self.exif?.gps?.latitude != nil && self.exif?.gps?.latitude != nil {
-                              print("EXIF lat/lon set")
-                            } else {
-                                print("missing lat/lon")
-                            }
-                            print("done exif on selected image")
-                            // POST SELECTED FILE TO SERVER
-                            self.postFile(fileType: "image")
-                        } else {
-                            self.postFile(fileType: "image")
+                            //if self.exif?.gps?.dateStamp != nil && self.exif?.gps?.timeStamp != nil && self.exif?.gps?.timeZoneAbbreviation != nil {}
+                            //if self.exif?.gps?.latitude != nil && self.exif?.gps?.longitude != nil {}
                         }
+                        self.postFile(chosenImage: image, fileType: "image")
                     }
                 } else {
                     showAlertFromAppDelegate(title: "Need Photo Permission", message: "Please go to Settings>> Blip dropper>> Photos>> All Photos in order to upoad photos")
                 }
             } else if imagePicker.sourceType == .camera {
-                postFile(fileType: "image")
+                cameraPhotoSwitch = "camera"
+                postFile(chosenImage: image, fileType: "camera")
             }
         } else {
             print("Something went wrong with imagePickerController")
@@ -1057,10 +988,31 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
         picker.dismiss(animated: true, completion: nil)
         print(picker)
         print(results)
+
+        // NSItemProvider what are item provider vs. Results? Something about letting use video or Photo? A way to retain live image?
+        let itemProviders = results.map(\.itemProvider)
+        for item in itemProviders {
+                if item.canLoadObject(ofClass: UIImage.self) {
+                    item.loadObject(ofClass: UIImage.self) { (image, error) in
+                        DispatchQueue.main.async {
+                            if let image = image as? UIImage {
+                                self.imageView.image = nil
+                                self.imageView.image = image
+                            }
+                        }
+                    }
+                }
+            }
         
         for result in results {
             print(result.assetIdentifier)
             print(result.itemProvider)
+
+            if let assetId = result.assetIdentifier {
+                let assetResults = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
+                print(assetResults.firstObject?.creationDate ?? "No date")
+                print(assetResults.firstObject?.location?.coordinate ?? "No location")
+            }
             
             result.itemProvider.loadObject(ofClass: UIImage.self, completionHandler: { (object, error) in
                 print(object)
@@ -1082,4 +1034,13 @@ extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDele
         }
     }
 }
+extension BlipMainVC: blipMainCellDelegate {
+    func resetMapImage(mergedMapImage: UIImage){
+        // if there is only 1 file we assume its the mapImage
+        if blipFiles.count == 1 {
+            self.imageView.image = mergedMapImage
+        }
+    }
+}
+
 

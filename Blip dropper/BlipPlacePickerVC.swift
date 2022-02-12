@@ -29,11 +29,13 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     var test1 = 0
     var mode = ""
     
+    @IBOutlet weak var placeOfInterest: UILabel!
     @IBOutlet weak var map: MKMapView!
     @IBOutlet weak var searchBox: UITextField!
     @IBOutlet weak var PlaceTableView: UITableView!
     @IBOutlet weak var topLabel: UILabel!
     @IBOutlet weak var searchAreaButton: UIButton!
+    @IBOutlet weak var clearButton: UIButton!
     
     @IBAction func cancelPicker(_ sender: Any) {
         self.dismiss(animated: true, completion: nil)
@@ -43,6 +45,26 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         print("Lat = \(map.centerCoordinate.latitude) Lon = \(map.centerCoordinate.longitude)")
         // Refresh the Places list
         searchArea()
+    }
+    @IBAction func clearPlaceOfInterest(_ sender: Any) {
+        // Confirm they really want to
+        // Clear out the place settings as if there never was any
+        // Reset the Label to the instruction
+        let confirmClearPlaceOfInterest = UIAlertController(title: "Confirm", message: "Confirm you want to clear place of interest from Blip", preferredStyle: .alert)
+        let ok = UIAlertAction(title: "YES", style: .default, handler: { (action) -> Void in
+            print("Ok button tapped")
+            let blankPlace = blipPlace()
+            self.setPlaceForCurBlip(place: blankPlace)
+            self.dismiss(animated: true, completion: nil)
+        })
+        let cancel = UIAlertAction(title: "NO", style: .cancel) { (action) -> Void in
+        }
+        //Add OK and Cancel button to dialog message
+        confirmClearPlaceOfInterest.addAction(ok)
+        confirmClearPlaceOfInterest.addAction(cancel)
+        
+        // Present dialog message to user
+        self.present(confirmClearPlaceOfInterest, animated: true, completion: nil)
     }
     func searchArea() {
         yelpDone = false
@@ -64,6 +86,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         // Load markers for current region:
         //   mapView.centerCoordinate or mapView.region
         print("timer did a thing")
+        searchArea()
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.view.endEditing(true)
@@ -86,7 +109,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                 self.map.removeAnnotations(self.map.annotations)
 
                 for singleItem in searchResponse!.mapItems {
-                    var curBlipPlace = blipPlace()
+                    var returnedBlipPlace = blipPlace()
             
                     let addr1 = placeMark2Addr1(placemark: singleItem.placemark)
                     // To open apple map: singleItem.openInMaps(launchOptions: nil)
@@ -94,17 +117,17 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                     if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
                         let coordinate = CLLocation(latitude: lat, longitude: lon)
                         let distanceInMeters = coordinate.distance(from: placeCoordinate)
-                        curBlipPlace.distance = distanceInMeters
+                        returnedBlipPlace.distance = distanceInMeters
                     }
-                    curBlipPlace.type = "apple_search"
-                    curBlipPlace.name = singleItem.name ?? ""
-                    curBlipPlace.lat = singleItem.placemark.coordinate.latitude
-                    curBlipPlace.lon = singleItem.placemark.coordinate.longitude
-                    curBlipPlace.address1 = addr1
-                    curBlipPlace.url = singleItem.url?.absoluteString ?? ""
+                    returnedBlipPlace.type = "apple_search"
+                    returnedBlipPlace.name = singleItem.name ?? ""
+                    returnedBlipPlace.lat = singleItem.placemark.coordinate.latitude
+                    returnedBlipPlace.lon = singleItem.placemark.coordinate.longitude
+                    returnedBlipPlace.address1 = addr1
+                    returnedBlipPlace.url = singleItem.url?.absoluteString ?? ""
                     
-                    print (curBlipPlace.url)
-                    searchReturnPlaces.append(curBlipPlace)
+                    print (returnedBlipPlace.url)
+                    searchReturnPlaces.append(returnedBlipPlace)
                 
                     i += 1
                 }
@@ -147,7 +170,11 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         // how can you move this to a button tap on the tableview cell class
-        curBlipPlace = blipPlaces[indexPath.row]
+        setPlaceForCurBlip(place: blipPlaces[indexPath.row])
+        self.dismiss(animated: true, completion: nil)
+    }
+    func setPlaceForCurBlip(place: blipPlace) {
+        curBlipPlace = place
         print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
         curBlip.mode = "newPlace"
         curBlip.place = curBlipPlace
@@ -158,10 +185,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         curBlip.place_addr = curBlipPlace.address1
         curBlip.place_name = curBlipPlace.name
         curBlip.place_url = curBlipPlace.url
-        print(curBlip.place_url)
-        self.dismiss(animated: true, completion: nil)
     }
-    
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         return true
     }
@@ -186,7 +210,13 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             searchAreaButton.layer.cornerRadius = 5
             searchAreaButton.layer.borderWidth = 1
             searchAreaButton.layer.borderColor = UIColor.black.cgColor
-            
+        }
+        if curBlip.place_name == "" {
+            placeOfInterest.text = "Select a place of interest for your blip"
+            clearButton.isHidden = true
+        } else {
+            placeOfInterest.text = curBlip.place_name
+            clearButton.isHidden = false
         }
     }
     func runTimer() {
@@ -360,17 +390,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         if let tempString = (view.annotation?.subtitle) as? String {
             print("clicked on... \(tempString)")
             if let tempInt = Int(tempString) {
-                curBlipPlace = blipPlaces[tempInt]
-                print("You selected \(curBlipPlace.name) \(curBlipPlace.yelpId) \(curBlipPlace.lat ?? 0) \(curBlipPlace.lon ?? 0)")
-                curBlip.mode = "newPlace"
-                curBlip.place = curBlipPlace
-                curBlip.blip_yelp_id = curBlipPlace.yelpId
-                curBlip.blip_here_id = curBlipPlace.hereId
-                curBlip.place_lat = curBlipPlace.lat
-                curBlip.place_lon = curBlipPlace.lon
-                curBlip.place_addr = curBlipPlace.address1
-                curBlip.place_name = curBlipPlace.name
-                curBlip.place_url = curBlipPlace.url
+                setPlaceForCurBlip(place: blipPlaces[tempInt])
                 self.dismiss(animated: true, completion: nil)
             }
         }
@@ -395,11 +415,22 @@ extension BlipPlacePickerVC: customCellDelegate {
     func didTapButton1(msg: String, indexPath: Int) {
         self.topLabel.text = "\(msg)... selected row \(indexPath)"
         
-        print ("selected row \(indexPath)")
-        
+        let urlString = blipPlaces[indexPath].url
+        print("URL String: \(urlString)")
+
+        if let url = URL(string: urlString) {
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                //If you want handle the completion block than
+                UIApplication.shared.open(url, options: [:], completionHandler: { (success) in
+                    print("Open url : \(success)")
+                })
+            }
+        }
     }
     func didTapButton2(alert: String) {
-        self.topLabel.text = alert
+        // self.topLabel.text = alert
+        print("\(alert)")
     }
 }
 

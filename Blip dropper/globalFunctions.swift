@@ -602,7 +602,7 @@ func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (head
         // Find the last space in heading so you can continue message there
         let lastSpace = prefix.lastIndex(of: " ") ?? prefix.endIndex
         var breakPoint = lastSpace
-        breakChar = "|"
+        breakChar = " "
 
         // If there is a /n clip there
         if let newLine = prefix.firstIndex(of: "\n") {
@@ -611,14 +611,11 @@ func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (head
             breakChar = "\n"
         }
         // Use the Break Point to split the message in 2
-        let breakPointInt: Int = fullString.distance(from: fullString.startIndex, to: breakPoint)
-        // if the string has a eliptical ... then the break point is off by 2 because it 1 char in but 3 in
+        var breakPointInt: Int = fullString.distance(from: fullString.startIndex, to: breakPoint)
+        // if the string has a eliptical ... then the break point is off by 2 but only in iOS not playgrounds?
+        if heading.contains("…") {breakPointInt = breakPointInt - 2}
         heading = String(fullString.prefix(breakPointInt))
         remainingText = String(fullString.suffix(fullString.count - breakPointInt - 1))
-    }
-    if heading.contains("…") {
-        print("\(fullString)")
-        print (heading + breakChar + remainingText)
     }
 
     return (heading,remainingText,breakChar)
@@ -633,6 +630,38 @@ func check(in string: String, forAnyIn characters: String) -> Bool {
     let customSet = CharacterSet(charactersIn: characters)
     // use the rangeOfCharacter(from: CharacterSet) function
     return string.rangeOfCharacter(from: customSet) != nil
+}
+func mergeCenterImage (bgImage: UIImage, centerImage: UIImage, scaleFactor: Double, alpha: Double) -> UIImage {
+    var returnImage = UIImage()
+    // use the max of h/w to create 2 squares in order to calculate proportionality then: areaCenter ( X ) /areaBg = ScaleFactor
+    var areaBg: Double
+    var areaCenter: Double
+    // The larger size is the one that creates the square you are proportioning
+    if bgImage.size.height > bgImage.size.width {
+        areaBg = bgImage.size.height
+    } else {
+        areaBg = bgImage.size.width
+    }
+    if centerImage.size.height > centerImage.size.width {
+        areaCenter = centerImage.size.height
+    } else {
+        areaCenter = centerImage.size.width
+    }
+    let adjustPct = areaBg/areaCenter * scaleFactor
+    let centerPointWidth = centerImage.size.width * adjustPct
+    let centerPointHeight = centerImage.size.height * adjustPct
+    
+    UIGraphicsBeginImageContext(bgImage.size)
+    let areaSize = CGRect(x: 0, y: 0, width: bgImage.size.width, height: bgImage.size.height)
+    let centerPointAreaSize = CGRect(x: areaSize.width / 2 - centerPointWidth / 2, y: areaSize.height / 2 - centerPointHeight / 2, width: centerPointWidth, height: centerPointHeight)
+    bgImage.draw(in: areaSize)
+    centerImage.draw(in: centerPointAreaSize, blendMode: .normal, alpha: alpha)
+    if let finalImage = UIGraphicsGetImageFromCurrentImageContext() {
+        returnImage = finalImage
+    }
+    UIGraphicsEndImageContext()
+
+    return returnImage
 }
 func showAlertFromAppDelegate(title: String, message: String){
     var topWindow: UIWindow? = UIWindow(frame: UIScreen.main.bounds)

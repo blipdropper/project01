@@ -31,7 +31,7 @@ class BlipFeedTVCell: UITableViewCell {
         blipTS.text = blip.blip_dt_txt
         blipLatLon.text = returnLocationString(location: blip.blip_location)
 
-        let noteBreak = breakOutHeadingFromString(fullString: blip.blip_note, charBreakPoint: 30)
+        let noteBreak = breakOutHeadingFromString(fullString: blip.blip_note, charBreakPoint: 27)
         blipLabel.text = noteBreak.remainingText
         blipUsername.text = noteBreak.heading
         

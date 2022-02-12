@@ -13,7 +13,8 @@ import UIKit
 //self.exif.
 
 public struct Exif{
-    
+    var assetCreateDate: Date?
+    var assetLocation: CLLocation?
     let pixelHeight:Int
     let pixelWidth:Int
     let dpiHeight:Int
