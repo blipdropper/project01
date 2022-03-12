@@ -26,6 +26,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     var mapRegionTimer: Timer?
     var scheduledTimertimeInterval = 1.0
     var set = false
+    var txtIsPlaceHolder = false
+    var placeHolderText = "Enter a text to search map area"
     var test1 = 0
     var mode = ""
     
@@ -47,9 +49,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         searchArea()
     }
     @IBAction func clearPlaceOfInterest(_ sender: Any) {
-        // Confirm they really want to
-        // Clear out the place settings as if there never was any
-        // Reset the Label to the instruction
         let confirmClearPlaceOfInterest = UIAlertController(title: "Confirm", message: "Confirm you want to clear place of interest from Blip", preferredStyle: .alert)
         let ok = UIAlertAction(title: "YES", style: .default, handler: { (action) -> Void in
             print("Ok button tapped")
@@ -74,23 +73,37 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
         getHere(latitude:map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
         runTimer()
     }
-    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-        setMapRegionTimer()
+    func checkPlaceHolderText() {
+        if searchBox.text == "" {
+            searchBox.text = placeHolderText
+            searchBox.textColor = UIColor.gray
+            txtIsPlaceHolder = true
+        }
     }
-    func setMapRegionTimer() {
-        mapRegionTimer?.invalidate()
-        // Configure delay as bet fits your application
-        mapRegionTimer = Timer.scheduledTimer(timeInterval: scheduledTimertimeInterval, target: self, selector: #selector(mapRegionTimerFired), userInfo: nil, repeats: false)
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        checkPlaceHolderText()
     }
-    @objc func mapRegionTimerFired(sender: AnyObject) {
-        // Load markers for current region:
-        //   mapView.centerCoordinate or mapView.region
-        print("timer did a thing")
-        searchArea()
+    func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        if searchBox.text == placeHolderText {
+            searchBox.text = ""
+            searchBox.textColor = UIColor.black
+        }
+        return true;
     }
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        self.view.endEditing(true)
+    /*
+    func textFieldShouldClear(_ textField: UITextField) -> Bool {
+        print("TextField should clear method called")
+        return true;
     }
+    func textFieldShouldEndEditing(_ textField: UITextField) -> Bool {
+        print("TextField should end editing method called")
+        return true;
+    }
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        print("While entering the characters this method gets called")
+        return true;
+    }
+    */
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         // find places using apple map (not interoperable with address search setting map to area)
         let searchRequest = MKLocalSearchRequest()
@@ -110,7 +123,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
 
                 for singleItem in searchResponse!.mapItems {
                     var returnedBlipPlace = blipPlace()
-            
                     let addr1 = placeMark2Addr1(placemark: singleItem.placemark)
                     // To open apple map: singleItem.openInMaps(launchOptions: nil)
                     let placeCoordinate = CLLocation(latitude: singleItem.placemark.coordinate.latitude, longitude: singleItem.placemark.coordinate.longitude)
@@ -125,10 +137,8 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                     returnedBlipPlace.lon = singleItem.placemark.coordinate.longitude
                     returnedBlipPlace.address1 = addr1
                     returnedBlipPlace.url = singleItem.url?.absoluteString ?? ""
-                    
                     print (returnedBlipPlace.url)
                     searchReturnPlaces.append(returnedBlipPlace)
-                
                     i += 1
                 }
                 // Add Searched Locations to yelp places list
@@ -146,25 +156,38 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                         self.map.addAnnotation(annotation)
                     }
                 }
-
                 self.PlaceTableView.reloadData()
             }
         }
-        
         textField.resignFirstResponder()
 
         return true
+    }
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        setMapRegionTimer()
+    }
+    func setMapRegionTimer() {
+        mapRegionTimer?.invalidate()
+        // Configure delay as bet fits your application
+        mapRegionTimer = Timer.scheduledTimer(timeInterval: scheduledTimertimeInterval, target: self, selector: #selector(mapRegionTimerFired), userInfo: nil, repeats: false)
+    }
+    @objc func mapRegionTimerFired(sender: AnyObject) {
+        // Load markers for current region:
+        //   mapView.centerCoordinate or mapView.region
+        print("timer did a thing")
+        searchArea()
+    }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.view.endEditing(true)
     }
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return blipPlaces.count
     }
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = PlaceTableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath) as! BlipPlaceTVCell
-        cell.mode = "select"
         cell.delegate = self
         cell.rowNumber = indexPath.row
-        cell.placeLabel.text = "\(indexPath.row): \(blipPlaces[indexPath.row].name) - \(blipPlaces[indexPath.row].distance ?? 999)"
-        //\(blipPlaces[indexPath.row].yelpArrayPosition) \(blipPlaces[indexPath.row].hereArrayPosition)- \(blipPlaces[indexPath.row].distance ?? 999) - \(blipPlaces[indexPath.row].name)"
+        cell.setBlipPlaceRow(placeRow: blipPlaces[indexPath.row])
 
         return cell
     }
@@ -191,9 +214,13 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
     }
     override func viewDidLoad() {
         super.viewDidLoad()
+        setUpForm()
         printLog(stringValue: "View Did load happened")
         self.map.delegate = self
+        self.searchBox.delegate = self
         PlaceTableView.dataSource = self
+        topLabel.text = "Loading Nearby Places..."
+        checkPlaceHolderText()
         if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
             let mapCenter = CLLocationCoordinate2DMake(lat, lon)
             let mapSpan = MKCoordinateSpanMake(0.01, 0.01)
@@ -205,11 +232,6 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             annotation.coordinate = coordinate
             annotation.title = "Your Blips Location"
             annotation.subtitle = "Subtitle Placeholder"
-            
-            // self.map.addAnnotation(annotation)
-            searchAreaButton.layer.cornerRadius = 5
-            searchAreaButton.layer.borderWidth = 1
-            searchAreaButton.layer.borderColor = UIColor.black.cgColor
         }
         if curBlip.place_name == "" {
             placeOfInterest.text = "Select a place of interest for your blip"
@@ -218,6 +240,14 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
             placeOfInterest.text = curBlip.place_name
             clearButton.isHidden = false
         }
+    }
+    func setUpForm () {
+        searchAreaButton.layer.cornerRadius = 5
+        searchAreaButton.layer.borderWidth = 1
+        searchAreaButton.layer.borderColor = UIColor.black.cgColor
+        clearButton.layer.cornerRadius = 5
+        clearButton.layer.backgroundColor = UIColor.lightGray.cgColor
+
     }
     func runTimer() {
         var runCount = 0
@@ -287,7 +317,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                 for here in self.hereItems {
                     var curBlipPlace = blipPlace()
                     // print ("\(here.arrayPosition): \(here.title)")
-                    self.topLabel.text = "Count is \(self.hereItems.count)"
+                    self.topLabel.text = "Found \(self.hereItems.count) places, click to select"
                     curBlipPlace.name = here.title
                     curBlipPlace.distance = here.distance
                     curBlipPlace.address1 = here.address1
@@ -370,7 +400,7 @@ class BlipPlacePickerVC: UIViewController, UITableViewDelegate, UITextFieldDeleg
                                 self.hereDone = true
 
                                 DispatchQueue.main.async {
-                                    self.topLabel.text = "Count is \(self.hereItems.count)"
+                                    self.topLabel.text = "Found \(self.hereItems.count) places, click to select"
                                 }
                             }
                         } catch {

@@ -598,7 +598,6 @@ func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (head
     if fullString.count > charBreakPoint {
         // Get N characters out of total char count (hardcoded to 30 can this be dynamic?)
         var prefix = String(fullString.prefix(charBreakPoint))
-
         // Find the last space in heading so you can continue message there
         let lastSpace = prefix.lastIndex(of: " ") ?? prefix.endIndex
         var breakPoint = lastSpace
@@ -612,8 +611,10 @@ func breakOutHeadingFromString(fullString: String, charBreakPoint: Int) -> (head
         }
         // Use the Break Point to split the message in 2
         var breakPointInt: Int = fullString.distance(from: fullString.startIndex, to: breakPoint)
-        // if the string has a eliptical ... then the break point is off by 2 but only in iOS not playgrounds?
-        if heading.contains("…") {breakPointInt = breakPointInt - 2}
+        // if the prefix of string has a eliptical ... then the break point is off by 2 but only in iOS not playgrounds?
+        if prefix.contains("…") {
+            breakPointInt = breakPointInt - 2
+        }
         heading = String(fullString.prefix(breakPointInt))
         remainingText = String(fullString.suffix(fullString.count - breakPointInt - 1))
     }

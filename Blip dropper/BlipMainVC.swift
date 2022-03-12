@@ -458,11 +458,11 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         currLocation = userLocation
         let latitude = userLocation.coordinate.latitude
         let longitude = userLocation.coordinate.longitude
+        curBlip.blip_lat = latitude
+        curBlip.blip_lon = longitude
         if snapshotRan == "initialized" {
             setBlipLocationImage(latitude: latitude, longitude: longitude, mode: "nopost")
         }
-        print("Location set: \(latitude)")
-        print(longitude)
 
         // Reverse Geo Code for addr
         CLGeocoder().reverseGeocodeLocation(userLocation) { (placemarks, error) in
@@ -589,7 +589,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
                 loadedBlips.insert(curBlip, at: 0)
                 
                 if self.snapshotRan == "done" {
-                    if let image = self.mapImage {
+                    if let image = self.mapImage, !self.PhotoMode {
                         self.postLocationFile(mapImage: image, mapType: "location" )
                     }
                 } else {
@@ -734,9 +734,9 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
         userInteractionEnabledToggle(isEnabled: true)
         print("Ending touches began")
     }
-    func textViewDidChange(_ ttextView: UITextView) {
+    func textViewDidChange(_ textView: UITextView) {
         //textView(Sender)
-        if(ttextView == self.textView) {
+        if(textView == self.textView) {
             // I think this fires every time you type... commentign out
             // print("textView main was used")
         } else {
@@ -746,7 +746,7 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     }
     func textViewDidEndEditing(_ textView: UITextView) {
         print("Ending editing")
-        // checkPlaceHolderText()
+        checkPlaceHolderText()
     }
     func textViewDidBeginEditing(_ textView: UITextView) {
         if txtIsPlaceHolder {
@@ -755,6 +755,16 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
             txtIsPlaceHolder = false
         }
         userInteractionEnabledToggle(isEnabled: false)
+    }
+    func checkPlaceHolderText() {
+        //textView.layer.borderWidth = 1
+        //textView.layer.borderColor = UIColor.red.cgColor
+
+        if textView.text == "" {
+            textView.text = placeHolderText
+            textView.textColor = UIColor.gray
+            txtIsPlaceHolder = true
+        }
     }
     func blipAltered() {
         //blipSave.setTitle("SAVE", for: [])
@@ -825,16 +835,6 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
     @objc func dismissFullscreenImage(_ sender: UITapGestureRecognizer) {
         scroller.isHidden = true
         scroller.setZoomScale(0.0, animated: true)
-    }
-    func checkPlaceHolderText() {
-        //textView.layer.borderWidth = 1
-        //textView.layer.borderColor = UIColor.red.cgColor
-
-        if textView.text == "" {
-            textView.text = placeHolderText
-            textView.textColor = UIColor.gray
-            txtIsPlaceHolder = true
-        }
     }
     
     // ----------------------------------------
@@ -926,9 +926,12 @@ class BlipMainVC: UIViewController, CLLocationManagerDelegate, UICollectionViewD
 // EXTENSION for EXIF IMAGE PICKER CONTROLLER
 extension BlipMainVC:UIImagePickerControllerDelegate, UINavigationControllerDelegate, PHPickerViewControllerDelegate {
     public func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        PhotoMode = false
         self.dismiss(animated: true, completion: nil)
+        if let lat = curBlip.blip_lat, let lon = curBlip.blip_lon {
+            self.setBlipLocationImage(latitude: lat, longitude: lon, mode: "postfile")
+        }
     }
-    
     public func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String : Any]) {
         if let image = info[UIImagePickerControllerOriginalImage] as? UIImage {
             self.imageView.image = image

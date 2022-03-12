@@ -24,17 +24,25 @@ class BlipPlaceTVCell: UITableViewCell {
         print("click info tapped")
         delegate?.didTapButton1(msg: "Info 1 tapped", indexPath: rowNumber)
     }
-    
-    
+    func setBlipPlaceRow (placeRow: blipPlace){
+        mode = "select"
+        var distanceString = ""
+        if let distance = placeRow.distance {
+            distanceString = String(format: " (%.1f m away)", distance)
+        }
+        placeLabel.text = "\(placeRow.name)\(distanceString)"
+    }
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
+        setUpRow()
     }
-
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
 
         // Configure the view for the selected state
     }
-
+    func setUpRow() {
+        placeInfoButton.layer.cornerRadius = placeInfoButton.frame.size.width / 2
+    }
 }
